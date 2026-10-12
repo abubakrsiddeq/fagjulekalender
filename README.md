@@ -52,8 +52,12 @@ it deletes all data. For later changes, write a migration instead.
 1. Push this repository to GitHub (recommended) or zip it **without** `node_modules`, `.next`
    and `.env.local`.
 2. hPanel → **Websites → Add website → Node.js web app** → connect the GitHub repo or upload the zip.
-3. Node.js version **22** or **24**. Framework: Next.js (auto-detected).
+3. Node.js version **22** or **24** (Node 20 is end-of-life). Framework: Next.js (auto-detected).
    Build command `npm run build`, start command `npm start`.
+   `npm run build` runs `next build --webpack`: Hostinger's build servers have an old glibc, so
+   Next.js's native compiler (and with it Turbopack) can't run there and Next falls back to its
+   WebAssembly compiler. For the same reason the config is `next.config.mjs`, not `.ts`.
+   Warnings about `@next/swc-linux-x64-gnu` / `GLIBC_2.29` in the build log are expected.
 4. Add the environment variables from `.env.example` (you can upload a `.env` file there):
 
 | Variable | Value |

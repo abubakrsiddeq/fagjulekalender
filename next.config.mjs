@@ -1,4 +1,6 @@
-import type { NextConfig } from "next";
+// Plain JavaScript (not next.config.ts) on purpose: Hostinger's build servers can't run
+// Next.js's native compiler (old glibc), and the WebAssembly fallback can't load a
+// TypeScript config. For the same reason `npm run build` uses webpack, not Turbopack.
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -8,7 +10,8 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
 ];
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
