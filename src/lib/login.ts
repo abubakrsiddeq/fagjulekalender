@@ -4,7 +4,7 @@ import { db, isDuplicateKey } from "./db";
 import { env } from "./env";
 import { sendMail, escapeHtml } from "./mail";
 import { allowedDomains, getOrg } from "./org";
-import { createSession } from "./auth";
+import { createSession, USER_COLUMNS } from "./auth";
 import { t } from "@/i18n";
 import type { User } from "./types";
 
@@ -79,7 +79,7 @@ export async function requestLoginCode(email: string, ip: string): Promise<Login
   return { ok: true };
 }
 
-export async function verifyLoginCode(email: string, codeRaw: string): Promise<LoginResult> {
+export async function verifyLoginCode(email: string, codeRaw: string): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
   const code = codeRaw.replace(/\s+/g, "");
   if (!/^\d{6}$/.test(code)) return { ok: false, error: t.login.wrongCode };
 
@@ -104,7 +104,7 @@ export async function verifyLoginCode(email: string, codeRaw: string): Promise<L
 
   const user = await findOrCreateUser(email);
   await createSession(user.id);
-  return { ok: true };
+  return { ok: true, user };
 }
 
 function guessDisplayName(email: string): string {
@@ -120,7 +120,7 @@ function guessDisplayName(email: string): string {
 async function findOrCreateUser(email: string): Promise<User> {
   const org = await getOrg();
   const isAdmin = env.adminEmails.includes(email);
-  const select = "SELECT id, org_id, email, display_name, role, hide_name, notify_daily FROM users WHERE org_id = ? AND email = ?";
+  const select = `SELECT ${USER_COLUMNS.join(", ")} FROM users WHERE org_id = ? AND email = ?`;
   let user = await db.queryOne<User>(select, [org.id, email]);
   if (!user) {
     try {

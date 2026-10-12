@@ -38,6 +38,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     if (!rateLimit(`verify:${ip}`, 30, 15 * 60_000)) return { step: "code", email, next, error: t.login.tooManyAttempts };
     const res = await verifyLoginCode(email, String(formData.get("code") ?? ""));
     if (!res.ok) return { step: "code", email, next, error: res.error };
+    // First sign-in: registration (Kommune, Bydel, Avdeling, Ressursnummer, Ansvarlig) comes first.
+    if (!res.user.registered_at && !next.startsWith("/admin")) redirect(`/registrering?neste=${encodeURIComponent(next)}`);
     redirect(next);
   }
 

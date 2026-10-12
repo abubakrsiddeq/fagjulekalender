@@ -77,6 +77,7 @@ export async function setMembership(calendarId: number, userId: number, departme
 export async function mergeDepartments(fromId: number, intoId: number, actorId: number): Promise<number> {
   return transaction(async (tx) => {
     const res = await tx.execute("UPDATE memberships SET department_id = ? WHERE department_id = ?", [intoId, fromId]);
+    await tx.execute("UPDATE users SET department_id = ? WHERE department_id = ?", [intoId, fromId]);
     await tx.execute("UPDATE departments SET status = 'archived', merged_into_id = ? WHERE id = ? AND org_id = ?", [intoId, fromId, env.orgId]);
     await logAudit({ userId: actorId, action: "department.merge", entity: "department", entityId: fromId, after: { mergedInto: intoId, movedMemberships: res.affectedRows } }, tx);
     return res.affectedRows;

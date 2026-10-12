@@ -30,8 +30,17 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/de
   const cal = await requireCalendar(id);
   const userId = Number(userParam);
   if (!cal || !Number.isInteger(userId)) notFound();
-  const person = await db.queryOne<{ id: number; email: string; display_name: string; role: string }>(
-    "SELECT id, email, display_name, role FROM users WHERE id = ? AND org_id = ?",
+  const person = await db.queryOne<{
+    id: number;
+    email: string;
+    display_name: string;
+    role: string;
+    kommune: string | null;
+    bydel: string | null;
+    ressursnummer: string | null;
+    ansvarlig: string | null;
+  }>(
+    "SELECT id, email, display_name, role, kommune, bydel, ressursnummer, ansvarlig FROM users WHERE id = ? AND org_id = ?",
     [userId, env.orgId],
   );
   if (!person) notFound();
@@ -57,6 +66,9 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/de
       <h1>{person.display_name}</h1>
       <p className="muted">
         {person.email} · rolle: {person.role} · {membership ? `avdeling: ${membership.department_name}` : "ingen avdeling i denne kalenderen"} · {total} poeng
+      </p>
+      <p className="small">
+        Kommune: {person.kommune ?? "–"} · Bydel: {person.bydel ?? "–"} · Ressursnummer: {person.ressursnummer ?? "–"} · Ansvarlig: {person.ansvarlig ?? "–"}
       </p>
 
       <section className="panel" aria-labelledby="move-h">

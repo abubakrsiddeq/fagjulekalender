@@ -53,6 +53,13 @@ CREATE TABLE users (
   org_id         INT UNSIGNED NOT NULL,
   email          VARCHAR(254) NOT NULL,
   display_name   VARCHAR(100) NOT NULL,
+  -- Registration (filled in on first sign-in)
+  kommune        VARCHAR(100) NULL,
+  bydel          VARCHAR(100) NULL,
+  ressursnummer  VARCHAR(40) NULL,
+  ansvarlig      VARCHAR(120) NULL,
+  department_id  INT UNSIGNED NULL,   -- "Avdeling eller seksjon"; used when joining a calendar
+  registered_at  DATETIME NULL,
   role           ENUM('participant','lead','admin') NOT NULL DEFAULT 'participant',
   hide_name      TINYINT(1) NOT NULL DEFAULT 0,
   notify_daily   TINYINT(1) NOT NULL DEFAULT 0,
@@ -79,6 +86,10 @@ CREATE TABLE departments (
   CONSTRAINT fk_departments_proposed_by FOREIGN KEY (proposed_by) REFERENCES users (id) ON DELETE SET NULL,
   CONSTRAINT fk_departments_merged_into FOREIGN KEY (merged_into_id) REFERENCES departments (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- users and departments reference each other, so this key is added after both exist.
+ALTER TABLE users
+  ADD CONSTRAINT fk_users_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL;
 
 CREATE TABLE calendars (
   id                    INT UNSIGNED NOT NULL AUTO_INCREMENT,

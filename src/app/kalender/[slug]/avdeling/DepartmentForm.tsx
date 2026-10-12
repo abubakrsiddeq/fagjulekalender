@@ -9,6 +9,7 @@ export function DepartmentForm({
   slug,
   departments,
   currentId,
+  defaultId,
   notify,
   allowProposals,
   inline,
@@ -16,6 +17,7 @@ export function DepartmentForm({
   slug: string;
   departments: { id: number; name: string; pending: boolean }[];
   currentId: number | null;
+  defaultId: number | null;
   notify: boolean;
   allowProposals: boolean;
   inline: boolean;
@@ -29,7 +31,7 @@ export function DepartmentForm({
       {!proposing ? (
         <div className="field">
           <label htmlFor="department">{t.department.label}</label>
-          <select id="department" name="department" defaultValue={currentId ?? ""} required>
+          <select id="department" name="department" defaultValue={defaultId ?? ""} required>
             <option value="" disabled>
               {t.department.choose}
             </option>

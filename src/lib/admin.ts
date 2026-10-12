@@ -322,6 +322,7 @@ export async function answersForExport(cal: Calendar) {
     door_number: number;
     display_name: string;
     email: string;
+    ressursnummer: string | null;
     department: string;
     option_id: number;
     is_correct: number;
@@ -329,7 +330,7 @@ export async function answersForExport(cal: Calendar) {
     answered_at: Date;
     question_id: number;
   }>(
-    `SELECT q.door_number, u.display_name, u.email, d.name AS department, a.option_id, a.is_correct, a.on_door_day, a.answered_at, a.question_id
+    `SELECT q.door_number, u.display_name, u.email, u.ressursnummer, d.name AS department, a.option_id, a.is_correct, a.on_door_day, a.answered_at, a.question_id
        FROM answers a
        JOIN questions q ON q.id = a.question_id
        JOIN users u ON u.id = a.user_id

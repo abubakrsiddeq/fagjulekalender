@@ -74,6 +74,7 @@ export async function cleanup(now: Date) {
   const anonymized = await db.execute(
     `UPDATE users u
         SET u.email = CONCAT('anonymisert-', u.id, '@anonymisert.invalid'), u.display_name = 'Anonymisert',
+            u.kommune = NULL, u.bydel = NULL, u.ressursnummer = NULL, u.ansvarlig = NULL,
             u.hide_name = 1, u.notify_daily = 0, u.anonymized_at = ?
       WHERE u.org_id = ? AND u.role <> 'admin' AND u.anonymized_at IS NULL AND u.created_at < ?
         AND NOT EXISTS (SELECT 1 FROM memberships m JOIN calendars c ON c.id = m.calendar_id

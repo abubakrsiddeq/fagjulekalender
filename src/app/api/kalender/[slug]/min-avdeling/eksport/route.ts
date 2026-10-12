@@ -18,7 +18,21 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/kalender/[s
   const board = await getScoreboard(cal, { fresh: true });
   const rows = board.participants
     .filter((p) => p.departmentId === membership.department_id)
-    .map((p) => [p.displayName, p.email, membership.department_name, p.answered, p.correct, p.points, formatDateTime(p.lastAnswerAt, cal.timezone)]);
-  const csv = toCsv([["navn", "epost", "avdeling", "besvart", "riktige", "poeng", "sist_svart"], ...rows], { guardFormulas: true });
+    .map((p) => [
+      p.displayName,
+      p.email,
+      p.kommune,
+      p.bydel,
+      p.ressursnummer,
+      p.ansvarlig,
+      membership.department_name,
+      p.answered,
+      p.correct,
+      p.points,
+      formatDateTime(p.lastAnswerAt, cal.timezone),
+    ]);
+  const csv = toCsv([["navn", "epost", "kommune", "bydel", "ressursnummer", "ansvarlig", "avdeling", "besvart", "riktige", "poeng", "sist_svart"], ...rows], {
+    guardFormulas: true,
+  });
   return csvResponse(`deltakelse-${cal.slug}-${membership.department_name}.csv`, csv);
 }

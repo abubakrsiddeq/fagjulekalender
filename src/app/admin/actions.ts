@@ -179,6 +179,7 @@ export async function moveParticipant(_prev: FormState, fd: FormData): Promise<F
   } else {
     await db.execute("UPDATE memberships SET department_id = ? WHERE calendar_id = ? AND user_id = ?", [deptId, cal.id, userId]);
   }
+  await db.execute("UPDATE users SET department_id = ? WHERE id = ? AND org_id = ?", [deptId, userId, env.orgId]);
   await logAudit({
     userId: admin.id,
     action: "membership.move",
@@ -307,6 +308,7 @@ export async function anonymizeUser(fd: FormData) {
   await transaction(async (tx) => {
     await tx.execute(
       `UPDATE users SET email = CONCAT('anonymisert-', id, '@anonymisert.invalid'), display_name = 'Anonymisert', hide_name = 1,
+         kommune = NULL, bydel = NULL, ressursnummer = NULL, ansvarlig = NULL,
          notify_daily = 0, role = 'participant', anonymized_at = ? WHERE id = ? AND org_id = ?`,
       [new Date(), userId, env.orgId],
     );

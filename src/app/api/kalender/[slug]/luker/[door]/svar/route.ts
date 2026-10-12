@@ -2,6 +2,8 @@ import { apiError, isSameOrigin, json } from "@/lib/api";
 import { loadCalendarApi } from "@/lib/context";
 import { SUBMIT_ERROR_STATUS, submitAnswer } from "@/lib/answers";
 import { rateLimit } from "@/lib/ratelimit";
+import { ensureMembership } from "@/lib/registration";
+import { t } from "@/i18n";
 
 const MESSAGES: Record<string, string> = {
   not_published: "Kalenderen er ikke åpen for svar.",
@@ -23,6 +25,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/kalender/[s
   const { user, cal } = loaded;
 
   if (!rateLimit(`answer:${user.id}`, 30, 60_000)) return apiError(429, "rate_limited");
+  if (!user.registered_at) return apiError(403, "registration_required", t.registration.needed);
+  await ensureMembership(cal, user);
 
   const body = (await request.json().catch(() => null)) as { optionId?: unknown } | null;
   const optionId = Number(body?.optionId);

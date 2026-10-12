@@ -38,6 +38,10 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/kalen
         .map((p) => [
           p.displayName,
           p.email,
+          p.kommune,
+          p.bydel,
+          p.ressursnummer,
+          p.ansvarlig,
           p.departmentName,
           p.departmentStatus,
           p.answered,
@@ -48,7 +52,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/kalen
         ]);
       return csvResponse(
         `resultat-deltakere-${cal.slug}-${stamp}.csv`,
-        toCsv([["navn", "epost", "avdeling", "avdelingsstatus", "besvart", "riktige", "poeng", "teller_i_snitt", "sist_riktige_svar"], ...rows], {
+        toCsv([["navn", "epost", "kommune", "bydel", "ressursnummer", "ansvarlig", "avdeling", "avdelingsstatus", "besvart", "riktige", "poeng", "teller_i_snitt", "sist_riktige_svar"], ...rows], {
           guardFormulas: true,
         }),
       );
@@ -74,6 +78,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/kalen
         a.door_number,
         a.display_name,
         a.email,
+        a.ressursnummer ?? "",
         a.department ?? "",
         letterOf.get(a.option_id) ?? "",
         a.is_correct ? "ja" : "nei",
@@ -83,7 +88,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/kalen
       ]);
       return csvResponse(
         `svar-${cal.slug}-${stamp}.csv`,
-        toCsv([["luke", "navn", "epost", "avdeling", "svar", "riktig", "samme_dag", "poeng", "tidspunkt"], ...rows], { guardFormulas: true }),
+        toCsv([["luke", "navn", "epost", "ressursnummer", "avdeling", "svar", "riktig", "samme_dag", "poeng", "tidspunkt"], ...rows], { guardFormulas: true }),
       );
     }
 

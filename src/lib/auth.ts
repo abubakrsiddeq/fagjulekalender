@@ -9,6 +9,23 @@ import { env } from "./env";
 import type { Role, User } from "./types";
 
 export const SESSION_COOKIE = "fjk_session";
+
+/** Columns for the `User` type; prefix with "u." when the query joins users as `u`. */
+export const USER_COLUMNS = [
+  "id",
+  "org_id",
+  "email",
+  "display_name",
+  "role",
+  "hide_name",
+  "notify_daily",
+  "kommune",
+  "bydel",
+  "ressursnummer",
+  "ansvarlig",
+  "department_id",
+  "registered_at",
+];
 const SESSION_DAYS = 45;
 
 export function sha256(value: string): string {
@@ -46,7 +63,7 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return db.queryOne<User>(
-    `SELECT u.id, u.org_id, u.email, u.display_name, u.role, u.hide_name, u.notify_daily
+    `SELECT ${USER_COLUMNS.map((c) => `u.${c}`).join(", ")}
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id = ? AND s.expires_at > ? AND u.anonymized_at IS NULL AND u.org_id = ?`,
     [sha256(token), new Date(), env.orgId],

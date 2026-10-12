@@ -19,6 +19,12 @@ export interface User {
   role: Role;
   hide_name: number;
   notify_daily: number;
+  kommune: string | null;
+  bydel: string | null;
+  ressursnummer: string | null;
+  ansvarlig: string | null;
+  department_id: number | null;
+  registered_at: Date | null;
 }
 
 export interface Department {

@@ -45,7 +45,11 @@ date to a few days ago and publish it.
    departments and the 2026 calendar with the 24 questions from the prototype (as a **draft**).
 
 `schema.sql` starts with `DROP TABLE IF EXISTS`, so **never re-import it on a live database** —
-it deletes all data. For later changes, write a migration instead.
+it deletes all data. Later changes come as migrations in `database/migrations/`.
+
+**Already imported the first `schema.sql`?** Run `database/migrations/001-registrering.sql` once:
+phpMyAdmin → select the database → **SQL** tab → paste the file → *Go*. It adds the registration
+fields and opens sign-up to every e-mail address.
 
 ### 2.2 The app (Node.js web app)
 
@@ -102,8 +106,9 @@ long-running Node process (Hostinger Node.js app or a VPS) is the intended setup
 
 The calendar overview page (**Admin → Kalendere → [calendar]**) shows this as a checklist.
 
-1. **Innstillinger:** organization name, allowed e-mail domains (e.g. `oslo.kommune.no`),
-   whether participants may propose departments, optional brand colour and logo.
+1. **Innstillinger:** organization name, whether participants may propose departments,
+   optional brand colour and logo. Sign-up is open to every e-mail address by default; add
+   domains here (e.g. `oslo.kommune.no`) or use the invite list only if you want to restrict it.
 2. **Avdelinger:** add, rename, merge duplicates, archive.
 3. **Spørsmål:** check all 24 doors, or import a CSV (export first for the template;
    `database/sporsmal-2026.csv` is the seed questions in that format).
@@ -123,6 +128,7 @@ After the last door: export results, then **Arkiver**.
 | FR-1.1 e-mail one-time code | `src/lib/login.ts`, `/logg-inn` |
 | FR-1.3 allowed domains / invite list | Admin → Innstillinger, Brukere og tilgang |
 | FR-1.4 editable display name | `/profil` |
+| Registration on first sign-in: Kommune, Bydel (optional), Avdeling eller seksjon, Ressursnummer, Ansvarlig | `/registrering`, `src/lib/registration.ts`; editable under `/profil`; included in participant and lead exports |
 | FR-2.1–2.4 departments, proposals, change lock after door 1 | `src/lib/departments.ts`, calendar page |
 | FR-3.1–3.5 calendar, server-side unlock in Europe/Oslo, door states, preview | `src/lib/calendar.ts`, `src/lib/time.ts`, admin preview |
 | FR-4.1 one attempt (unique key), FR-4.2 no answer key before answering | `src/lib/answers.ts`, `POST /api/kalender/[slug]/luker/[door]/svar` |
@@ -140,6 +146,13 @@ summary to leads (Could), `.xlsx` upload (import and export are CSV that Excel o
 saves; the import page says how), image upload (questions take an image URL).
 
 ## 5. Data model
+
+`users` also holds the registration fields (`kommune`, `bydel`, `ressursnummer`, `ansvarlig`,
+`department_id` = "Avdeling eller seksjon", `registered_at`). "Avdeling eller seksjon" is the
+department the participant competes for: they join each open calendar with it automatically
+and can change it until door 1 opens. **GDPR:** the requirements say "store only name, work
+e-mail, department and answers" — the data processing agreement must now also list kommune,
+bydel, ressursnummer and ansvarlig. Anonymization (manual and after 12 months) clears them.
 
 `database/schema.sql` has the nine tables from the requirements (`organizations`, `users`,
 `departments`, `calendars`, `memberships`, `questions`, `question_options` — "Option" is a

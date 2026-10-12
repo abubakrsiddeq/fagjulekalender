@@ -71,7 +71,7 @@ SET NAMES utf8mb4;
 SET time_zone = '+00:00';
 
 INSERT INTO organizations (id, name, allowed_email_domains, allow_department_proposals)
-VALUES (1, 'Helsetjenester i hjemmet', 'oslo.kommune.no', 1);
+VALUES (1, 'Helsetjenester i hjemmet', NULL, 1);
 
 `;
 for (const d of DEPARTMENTS) {

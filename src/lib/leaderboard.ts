@@ -11,6 +11,10 @@ export interface ParticipantScore {
   displayName: string;
   email: string;
   hideName: boolean;
+  kommune: string | null;
+  bydel: string | null;
+  ressursnummer: string | null;
+  ansvarlig: string | null;
   departmentId: number;
   departmentName: string;
   departmentStatus: DepartmentStatus;
@@ -60,6 +64,10 @@ async function computeScoreboard(cal: Calendar): Promise<Scoreboard> {
     display_name: string;
     email: string;
     hide_name: number;
+    kommune: string | null;
+    bydel: string | null;
+    ressursnummer: string | null;
+    ansvarlig: string | null;
     department_id: number;
     department_name: string;
     department_status: DepartmentStatus;
@@ -69,7 +77,7 @@ async function computeScoreboard(cal: Calendar): Promise<Scoreboard> {
     last_correct_at: Date | null;
     last_answer_at: Date | null;
   }>(
-    `SELECT m.user_id, u.display_name, u.email, u.hide_name,
+    `SELECT m.user_id, u.display_name, u.email, u.hide_name, u.kommune, u.bydel, u.ressursnummer, u.ansvarlig,
             m.department_id, d.name AS department_name, d.status AS department_status,
             COUNT(a.id) AS answered,
             COALESCE(SUM(a.is_correct), 0) AS correct,
@@ -81,7 +89,8 @@ async function computeScoreboard(cal: Calendar): Promise<Scoreboard> {
        JOIN departments d ON d.id = m.department_id
   LEFT JOIN answers a ON a.calendar_id = m.calendar_id AND a.user_id = m.user_id
       WHERE m.calendar_id = ?
-   GROUP BY m.user_id, u.display_name, u.email, u.hide_name, m.department_id, d.name, d.status`,
+   GROUP BY m.user_id, u.display_name, u.email, u.hide_name, u.kommune, u.bydel, u.ressursnummer, u.ansvarlig,
+            m.department_id, d.name, d.status`,
     [cal.points_correct, cal.same_day_bonus, cal.id],
   );
 
@@ -91,6 +100,10 @@ async function computeScoreboard(cal: Calendar): Promise<Scoreboard> {
     displayName: r.display_name,
     email: r.email,
     hideName: !!r.hide_name,
+    kommune: r.kommune,
+    bydel: r.bydel,
+    ressursnummer: r.ressursnummer,
+    ansvarlig: r.ansvarlig,
     departmentId: r.department_id,
     departmentName: r.department_name,
     departmentStatus: r.department_status,

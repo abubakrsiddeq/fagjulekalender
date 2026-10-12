@@ -45,6 +45,7 @@ export async function DepartmentPicker({
       slug={slug}
       departments={departments}
       currentId={membership?.department_id ?? null}
+      defaultId={membership?.department_id ?? user.department_id}
       notify={!!user.notify_daily}
       allowProposals={!!org.allow_department_proposals}
       inline={inline}

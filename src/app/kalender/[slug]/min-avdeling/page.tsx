@@ -61,6 +61,7 @@ async function LeadContent({ params }: { params: PageProps<"/kalender/[slug]/min
                 <tr>
                   <th scope="col">{t.lead.member}</th>
                   <th scope="col">{t.lead.email}</th>
+                  <th scope="col">{t.registration.ressursnummer}</th>
                   <th scope="col" className="num">
                     {t.lead.answered}
                   </th>
@@ -78,6 +79,7 @@ async function LeadContent({ params }: { params: PageProps<"/kalender/[slug]/min
                   <tr key={m.userId}>
                     <td>{m.displayName}</td>
                     <td className="small">{m.email}</td>
+                    <td className="small">{m.ressursnummer ?? "–"}</td>
                     <td className="num">
                       {m.answered}/{cal.door_count}
                     </td>

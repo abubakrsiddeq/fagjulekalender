@@ -41,7 +41,7 @@ export async function joinDepartment(slug: string, _prev: JoinState, formData: F
   }
 
   await setMembership(cal.id, user.id, departmentId);
-  await db.execute("UPDATE users SET notify_daily = ? WHERE id = ?", [formData.get("notify") === "on" ? 1 : 0, user.id]);
+  await db.execute("UPDATE users SET department_id = ?, notify_daily = ? WHERE id = ?", [departmentId, formData.get("notify") === "on" ? 1 : 0, user.id]);
   invalidateScoreboard(cal.id);
   if (formData.get("inline") === "1") {
     // Picked on the calendar page itself: re-render it in place.

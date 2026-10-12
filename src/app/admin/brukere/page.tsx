@@ -30,11 +30,21 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const like = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
-  const users = await db.query<{ id: number; email: string; display_name: string; role: string; last_login_at: Date | null; anonymized_at: Date | null }>(
-    `SELECT id, email, display_name, role, last_login_at, anonymized_at FROM users
-      WHERE org_id = ? AND anonymized_at IS NULL AND (? = '' OR email LIKE ? OR display_name LIKE ?)
+  const users = await db.query<{
+    id: number;
+    email: string;
+    display_name: string;
+    role: string;
+    kommune: string | null;
+    bydel: string | null;
+    ressursnummer: string | null;
+    registered_at: Date | null;
+    last_login_at: Date | null;
+  }>(
+    `SELECT id, email, display_name, role, kommune, bydel, ressursnummer, registered_at, last_login_at FROM users
+      WHERE org_id = ? AND anonymized_at IS NULL AND (? = '' OR email LIKE ? OR display_name LIKE ? OR ressursnummer LIKE ?)
       ORDER BY role = 'admin' DESC, role = 'lead' DESC, display_name LIMIT 300`,
-    [env.orgId, q, like, like],
+    [env.orgId, q, like, like, like],
   );
   const invites = await db.query<{ email: string; created_at: Date }>("SELECT email, created_at FROM invites WHERE org_id = ? ORDER BY email", [env.orgId]);
   const org = await getOrg();
@@ -66,9 +76,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
           <h2 id="users-h">Brukere</h2>
           <form className="inline-form" role="search">
             <label htmlFor="q" className="sr-only">
-              Søk etter navn eller e-post
+              Søk etter navn, e-post eller ressursnummer
             </label>
-            <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn eller e-post" />
+            <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn, e-post, ressursnr." />
             <button className="btn ghost small" type="submit">
               Søk
             </button>
@@ -80,6 +90,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
               <tr>
                 <th scope="col">Navn</th>
                 <th scope="col">E-post</th>
+                <th scope="col">Kommune / bydel</th>
+                <th scope="col">Ressursnr.</th>
                 <th scope="col">Rolle</th>
                 <th scope="col">Sist innlogget</th>
                 <th scope="col">
@@ -92,6 +104,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
                 <tr key={u.id}>
                   <td>{u.display_name}</td>
                   <td className="small">{u.email}</td>
+                  <td className="small">{u.registered_at ? [u.kommune, u.bydel].filter(Boolean).join(" / ") : <span className="badge warn">Ikke registrert</span>}</td>
+                  <td className="small">{u.ressursnummer ?? "–"}</td>
                   <td>
                     <form action={setUserRole} className="inline-form">
                       <input type="hidden" name="user_id" value={u.id} />

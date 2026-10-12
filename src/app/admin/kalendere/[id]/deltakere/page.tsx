@@ -33,7 +33,11 @@ async function Content({
   const q = typeof sp.q === "string" ? sp.q.trim().toLocaleLowerCase("nb") : "";
   const board = await getScoreboard(cal, { fresh: true });
   const rows = board.participants
-    .filter((p) => !q || p.displayName.toLocaleLowerCase("nb").includes(q) || p.email.includes(q) || p.departmentName.toLocaleLowerCase("nb").includes(q))
+    .filter(
+      (p) =>
+        !q ||
+        [p.displayName, p.email, p.departmentName, p.kommune, p.bydel, p.ressursnummer, p.ansvarlig].some((v) => v?.toLocaleLowerCase("nb").includes(q)),
+    )
     .sort((a, b) => a.departmentName.localeCompare(b.departmentName, "nb") || a.displayName.localeCompare(b.displayName, "nb"));
 
   return (
@@ -45,9 +49,9 @@ async function Content({
       </div>
       <form className="inline-form" role="search">
         <label htmlFor="q" className="sr-only">
-          Søk etter navn, e-post eller avdeling
+          Søk etter navn, e-post, avdeling, kommune eller ressursnummer
         </label>
-        <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn, e-post eller avdeling" style={{ minWidth: 260 }} />
+        <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn, e-post, avdeling, kommune, ressursnr." style={{ minWidth: 300 }} />
         <button className="btn ghost small" type="submit">
           Søk
         </button>
@@ -61,6 +65,8 @@ async function Content({
               <tr>
                 <th scope="col">Navn</th>
                 <th scope="col">E-post</th>
+                <th scope="col">Kommune / bydel</th>
+                <th scope="col">Ressursnr.</th>
                 <th scope="col">Avdeling</th>
                 <th scope="col" className="num">
                   Besvart
@@ -78,6 +84,8 @@ async function Content({
                     <Link href={`/admin/kalendere/${cal.id}/deltakere/${p.userId}`}>{p.displayName}</Link>
                   </td>
                   <td className="small">{p.email}</td>
+                  <td className="small">{[p.kommune, p.bydel].filter(Boolean).join(" / ") || "–"}</td>
+                  <td className="small">{p.ressursnummer ?? "–"}</td>
                   <td>
                     {p.departmentName}
                     {p.departmentStatus !== "active" && <span className="badge warn"> {p.departmentStatus === "pending" ? "venter" : "arkivert"}</span>}
