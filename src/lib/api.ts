@@ -1,21 +1,16 @@
 import "server-only";
 import { headers } from "next/headers";
 import { env } from "./env";
+import { getT } from "@/i18n/server";
 
 export function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export const ERROR_MESSAGES: Record<number, string> = {
-  400: "Ugyldig forespørsel.",
-  401: "Du må logge inn.",
-  403: "Ingen tilgang.",
-  404: "Fant ikke det du lette etter.",
-  429: "For mange forespørsler. Vent litt og prøv igjen.",
-};
-
-export function apiError(status: number, code?: string, message?: string): Response {
-  return json({ error: code ?? String(status), message: message ?? ERROR_MESSAGES[status] ?? "Feil." }, status);
+export async function apiError(status: number, code?: string, message?: string): Promise<Response> {
+  const t = await getT();
+  const http = t.http as Record<number, string>;
+  return json({ error: code ?? String(status), message: message ?? http[status] ?? t.http.other }, status);
 }
 
 /**

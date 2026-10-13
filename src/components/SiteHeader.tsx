@@ -2,17 +2,19 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrg } from "@/lib/org";
 import { signOut } from "@/app/actions";
+import { getT } from "@/i18n/server";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
-import { t } from "@/i18n";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
+/** Shown while the page streams in; no text that depends on the visitor. */
 export function SiteHeaderShell() {
   return (
     <header className="site-header">
       <div className="inner">
         <Link href="/" className="brand">
-          <b>{t.appName}</b>
+          <b>Fagjulekalender</b>
         </Link>
       </div>
     </header>
@@ -23,7 +25,7 @@ export async function SiteHeader() {
   // Read the session first: it makes this component request-time only, so the
   // database is never queried during `next build`.
   const user = await getCurrentUser();
-  const org = await getOrg();
+  const [org, t] = await Promise.all([getOrg(), getT()]);
   const brand = org.brand_color && HEX.test(org.brand_color) ? org.brand_color : null;
   const logo = org.logo_url && /^https:\/\//.test(org.logo_url) ? org.logo_url : null;
 
@@ -39,7 +41,7 @@ export async function SiteHeader() {
             <span>{org.name}</span>
           </span>
         </Link>
-        <nav className="site-nav" aria-label="Hovedmeny">
+        <nav className="site-nav" aria-label={t.nav.mainMenu}>
           {user ? (
             <>
               <Link href="/profil">{t.nav.profile}</Link>
@@ -53,7 +55,8 @@ export async function SiteHeader() {
           ) : (
             <Link href="/logg-inn">{t.nav.signIn}</Link>
           )}
-          <ThemeToggle label={t.nav.themeToggle} />
+          <LanguageSwitcher />
+          <ThemeToggle />
         </nav>
       </div>
     </header>

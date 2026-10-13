@@ -7,9 +7,12 @@ import { formatDateTime } from "@/lib/time";
 import { CalendarNav } from "@/components/CalendarNav";
 import { Loading } from "@/components/Loading";
 import { ScrollTable } from "@/components/ScrollTable";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: t.lead.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.lead.title };
+}
 
 export default function LeadPage(props: PageProps<"/kalender/[slug]/min-avdeling">) {
   return (
@@ -24,6 +27,7 @@ export default function LeadPage(props: PageProps<"/kalender/[slug]/min-avdeling
 async function LeadContent({ params }: { params: PageProps<"/kalender/[slug]/min-avdeling">["params"] }) {
   const { slug } = await params;
   const { user, cal, membership } = await loadCalendarPage(slug, `/kalender/${slug}/min-avdeling`);
+  const t = await getT();
   if (user.role !== "lead" && user.role !== "admin") redirect(`/kalender/${slug}`);
   if (!membership) {
     return <p className="note">{t.lead.noDepartment}</p>;
@@ -46,7 +50,7 @@ async function LeadContent({ params }: { params: PageProps<"/kalender/[slug]/min
       <section className="panel">
         <div className="panel-head">
           <h2>
-            {members.length} {members.length === 1 ? "medlem" : "medlemmer"}
+            {t.lead.members(members.length)}
           </h2>
           <a className="btn ghost small" href={`/api/kalender/${slug}/min-avdeling/eksport`}>
             {t.lead.export}

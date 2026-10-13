@@ -7,9 +7,12 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { CalendarNav } from "@/components/CalendarNav";
 import { DepartmentTable, TopTable } from "@/components/Leaderboards";
 import { Loading } from "@/components/Loading";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: t.results.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.results.title };
+}
 
 export default function ResultsPage(props: PageProps<"/kalender/[slug]/resultater">) {
   return (
@@ -25,6 +28,7 @@ async function ResultsContent({ params }: { params: PageProps<"/kalender/[slug]/
   const { slug } = await params;
   const { user, cal, membership } = await loadCalendarPage(slug, `/kalender/${slug}/resultater`);
   const board = await getScoreboard(cal);
+  const t = await getT();
   const top = topParticipants(board, 15, t.results.hidden);
 
   return (

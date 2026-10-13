@@ -19,6 +19,7 @@ export const USER_COLUMNS = [
   "role",
   "hide_name",
   "notify_daily",
+  "locale",
   "kommune",
   "bydel",
   "ressursnummer",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { requireCalendar } from "@/lib/admin";
 import { db } from "@/lib/db";
@@ -10,11 +11,15 @@ import { listDepartments } from "@/lib/departments";
 import { LETTERS } from "@/lib/answers";
 import { formatDateTime } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 import { resetAnswer } from "../../../../actions";
 import { CalendarAdminNav } from "../../../../_components/CalendarAdminNav";
 import { MoveForm } from "../../../../_components/MoveForm";
+import type { Role } from "@/lib/types";
 
-export const metadata = { title: "Deltaker" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.participant.title };
+}
 
 export default function ParticipantPage(props: PageProps<"/admin/kalendere/[id]/deltakere/[userId]">) {
   return (
@@ -30,19 +35,18 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/de
   const cal = await requireCalendar(id);
   const userId = Number(userParam);
   if (!cal || !Number.isInteger(userId)) notFound();
+  const a = (await getT()).admin;
+  const pp = a.participant;
   const person = await db.queryOne<{
     id: number;
     email: string;
     display_name: string;
-    role: string;
+    role: Role;
     kommune: string | null;
     bydel: string | null;
     ressursnummer: string | null;
     ansvarlig: string | null;
-  }>(
-    "SELECT id, email, display_name, role, kommune, bydel, ressursnummer, ansvarlig FROM users WHERE id = ? AND org_id = ?",
-    [userId, env.orgId],
-  );
+  }>("SELECT id, email, display_name, role, kommune, bydel, ressursnummer, ansvarlig FROM users WHERE id = ? AND org_id = ?", [userId, env.orgId]);
   if (!person) notFound();
   const [membership, departments, answers] = await Promise.all([
     getMembership(cal.id, userId),
@@ -55,64 +59,61 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/de
       [cal.id, userId],
     ),
   ]);
-  const total = answers.reduce((sum, a) => sum + pointsFor(cal, !!a.is_correct, !!a.on_door_day), 0);
+  const total = answers.reduce((sum, x) => sum + pointsFor(cal, !!x.is_correct, !!x.on_door_day), 0);
 
   return (
     <>
       <CalendarAdminNav id={cal.id} name={cal.name} active="participants" />
       <p className="crumbs">
-        <Link href={`/admin/kalendere/${cal.id}/deltakere`}>Alle deltakere</Link>
+        <Link href={`/admin/kalendere/${cal.id}/deltakere`}>{pp.all}</Link>
       </p>
       <h1>{person.display_name}</h1>
-      <p className="muted">
-        {person.email} · rolle: {person.role} · {membership ? `avdeling: ${membership.department_name}` : "ingen avdeling i denne kalenderen"} · {total} poeng
-      </p>
-      <p className="small">
-        Kommune: {person.kommune ?? "–"} · Bydel: {person.bydel ?? "–"} · Ressursnummer: {person.ressursnummer ?? "–"} · Ansvarlig: {person.ansvarlig ?? "–"}
-      </p>
+      <p className="muted">{pp.summary(person.email, a.roles[person.role], membership?.department_name ?? null, total)}</p>
+      <p className="small">{pp.registration(person.kommune ?? "–", person.bydel ?? "–", person.ressursnummer ?? "–", person.ansvarlig ?? "–")}</p>
 
       <section className="panel" aria-labelledby="move-h">
-        <h2 id="move-h">Flytt til annen avdeling</h2>
-        <p className="small">Poengene følger deltakeren til den nye avdelingen. Flyttingen logges.</p>
+        <h2 id="move-h">{pp.moveTitle}</h2>
+        <p className="small">{pp.moveNote}</p>
         <MoveForm calendarId={cal.id} userId={userId} currentId={membership?.department_id ?? null} departments={departments.map((d) => ({ id: d.id, name: d.name }))} />
       </section>
 
       <section className="panel tbl" aria-labelledby="ans-h">
-        <h2 id="ans-h">Svar</h2>
+        <h2 id="ans-h">{pp.answersTitle}</h2>
         {answers.length === 0 ? (
-          <p className="empty">Ingen svar ennå.</p>
+          <p className="empty">{pp.noAnswers}</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th scope="col">Luke</th>
-                <th scope="col">Svar</th>
-                <th scope="col">Resultat</th>
-                <th scope="col">Tidspunkt</th>
-                <th scope="col">Nullstill</th>
+                <th scope="col">{a.editor.door}</th>
+                <th scope="col">{pp.answer}</th>
+                <th scope="col">{pp.result}</th>
+                <th scope="col">{pp.time}</th>
+                <th scope="col">{pp.reset}</th>
               </tr>
             </thead>
             <tbody>
-              {answers.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.door_number}</td>
+              {answers.map((x) => (
+                <tr key={x.id}>
+                  <td>{x.door_number}</td>
                   <td>
-                    <b>{LETTERS[a.option_index]}</b> {a.option_text}
+                    <b>{LETTERS[x.option_index]}</b> {x.option_text}
                   </td>
                   <td>
-                    {a.is_correct ? <span className="badge ok">Riktig</span> : <span className="badge bad">Feil</span>} {pointsFor(cal, !!a.is_correct, !!a.on_door_day)} p
+                    {x.is_correct ? <span className="badge ok">{pp.correct}</span> : <span className="badge bad">{pp.wrong}</span>}{" "}
+                    {pp.pointsShort(pointsFor(cal, !!x.is_correct, !!x.on_door_day))}
                   </td>
-                  <td className="small">{formatDateTime(a.answered_at, cal.timezone)}</td>
+                  <td className="small">{formatDateTime(x.answered_at, cal.timezone)}</td>
                   <td>
                     <form action={resetAnswer} className="inline-form">
                       <input type="hidden" name="calendar_id" value={cal.id} />
-                      <input type="hidden" name="answer_id" value={a.id} />
-                      <label className="sr-only" htmlFor={`reason-${a.id}`}>
-                        Begrunnelse for nullstilling av luke {a.door_number}
+                      <input type="hidden" name="answer_id" value={x.id} />
+                      <label className="sr-only" htmlFor={`reason-${x.id}`}>
+                        {pp.resetReasonFor(x.door_number)}
                       </label>
-                      <input id={`reason-${a.id}`} name="reason" type="text" placeholder="Begrunnelse" required maxLength={500} />
+                      <input id={`reason-${x.id}`} name="reason" type="text" placeholder={a.c.reason} required maxLength={500} />
                       <button className="btn ghost small" type="submit">
-                        Nullstill
+                        {pp.reset}
                       </button>
                     </form>
                   </td>
@@ -121,7 +122,7 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/de
             </tbody>
           </table>
         )}
-        <p className="small">Når et svar nullstilles, kan deltakeren svare på luken på nytt.</p>
+        <p className="small">{pp.resetNote}</p>
       </section>
     </>
   );

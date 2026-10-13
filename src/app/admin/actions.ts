@@ -20,6 +20,7 @@ import { invalidateOrg } from "@/lib/org";
 import { deleteQuestion, importQuestionsCsv, saveQuestion, type ImportReport, type QuestionInput } from "@/lib/questions";
 import { isValidEmail, normalizeEmail } from "@/lib/login";
 import type { Role } from "@/lib/types";
+import { getT } from "@/i18n/server";
 
 export interface FormState {
   ok?: boolean;
@@ -44,13 +45,15 @@ export async function createCalendar(_prev: FormState, fd: FormData): Promise<Fo
 
 export async function updateCalendar(calendarId: number, _prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(calendarId);
-  if (!cal) return { errors: ["Fant ikke kalenderen."] };
+  if (!cal) return { errors: [m.calendarNotFound] };
   const res = await updateCalendarLib(cal, parseCalendarForm(fd), admin.id);
   if ("errors" in res) return { errors: res.errors };
   invalidateScoreboard(cal.id);
   refresh();
-  return { ok: true, message: "Innstillingene er lagret." };
+  return { ok: true, message: m.settingsSaved };
 }
 
 export async function setCalendarStatus(fd: FormData) {
@@ -64,8 +67,10 @@ export async function setCalendarStatus(fd: FormData) {
 
 export async function copyCalendar(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(str(fd, "calendar_id"));
-  if (!cal) return { errors: ["Fant ikke kalenderen."] };
+  if (!cal) return { errors: [m.calendarNotFound] };
   const res = await copyCalendarLib(cal, Number(str(fd, "year")), str(fd, "slug").toLowerCase(), admin.id);
   if ("errors" in res) return { errors: res.errors };
   revalidatePath("/admin", "layout");
@@ -100,8 +105,10 @@ function parseQuestionForm(fd: FormData): QuestionInput {
 
 export async function saveQuestionAction(calendarId: number, existingDoor: number | null, _prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(calendarId);
-  if (!cal) return { errors: ["Fant ikke kalenderen."] };
+  if (!cal) return { errors: [m.calendarNotFound] };
   const res = await saveQuestion(cal, parseQuestionForm(fd), existingDoor, admin.id, {
     confirmed: fd.get("confirm_open") === "on",
     reason: str(fd, "reason"),
@@ -112,7 +119,7 @@ export async function saveQuestionAction(calendarId: number, existingDoor: numbe
     redirect(`/admin/kalendere/${cal.id}/sporsmal/${res.door}?lagret=1`);
   }
   refresh();
-  return { ok: true, message: "Spørsmålet er lagret." };
+  return { ok: true, message: t.admin.questions.saved };
 }
 
 export async function deleteQuestionAction(fd: FormData) {
@@ -132,16 +139,18 @@ export interface ImportState {
 
 export async function importQuestionsAction(calendarId: number, _prev: ImportState, fd: FormData): Promise<ImportState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(calendarId);
-  if (!cal) return { error: "Fant ikke kalenderen." };
+  if (!cal) return { error: m.calendarNotFound };
   const file = fd.get("file");
   let text = str(fd, "csv_text");
   if (file instanceof File && file.size > 0) {
-    if (file.size > 1_500_000) return { error: "Filen er for stor (maks 1,5 MB)." };
-    if (/\.xlsx?$/i.test(file.name)) return { error: "Lagre regnearket som CSV (Fil → Lagre som → CSV UTF-8) og last opp CSV-filen." };
+    if (file.size > 1_500_000) return { error: m.fileTooLarge };
+    if (/\.xlsx?$/i.test(file.name)) return { error: m.saveAsCsv };
     text = await file.text();
   }
-  if (!text) return { error: "Velg en CSV-fil eller lim inn innholdet." };
+  if (!text) return { error: m.chooseFile };
   const report = await importQuestionsCsv(cal, text, admin.id, fd.get("overwrite_opened") === "on");
   refresh();
   return { report };
@@ -165,14 +174,16 @@ export async function updateSourceRevision(fd: FormData) {
 
 export async function moveParticipant(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(str(fd, "calendar_id"));
   const userId = Number(str(fd, "user_id"));
   const deptId = Number(str(fd, "department_id"));
   const reason = str(fd, "reason");
-  if (!cal) return { errors: ["Fant ikke kalenderen."] };
-  if (!reason) return { errors: ["Skriv en begrunnelse for flyttingen."] };
+  if (!cal) return { errors: [m.calendarNotFound] };
+  if (!reason) return { errors: [m.moveReasonRequired] };
   const dept = await getDepartment(deptId);
-  if (!dept || dept.status === "archived") return { errors: ["Velg en aktiv avdeling."] };
+  if (!dept || dept.status === "archived") return { errors: [m.chooseActiveDepartment] };
   const before = await db.queryOne<{ department_id: number }>("SELECT department_id FROM memberships WHERE calendar_id = ? AND user_id = ?", [cal.id, userId]);
   if (!before) {
     await db.execute("INSERT INTO memberships (calendar_id, user_id, department_id, joined_at) VALUES (?, ?, ?, ?)", [cal.id, userId, deptId, new Date()]);
@@ -191,14 +202,16 @@ export async function moveParticipant(_prev: FormState, fd: FormData): Promise<F
   });
   invalidateScoreboard(cal.id);
   refresh();
-  return { ok: true, message: `Flyttet til ${dept.name}.` };
+  return { ok: true, message: m.moved(dept.name) };
 }
 
 export async function resetAnswer(fd: FormData) {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const cal = await requireCalendar(str(fd, "calendar_id"));
   const answerId = Number(str(fd, "answer_id"));
-  const reason = str(fd, "reason") || "Nullstilt av administrator";
+  const reason = str(fd, "reason") || m.resetDefaultReason;
   if (!cal) return;
   await transaction(async (tx) => {
     const before = await tx.queryOne<Record<string, unknown>>("SELECT * FROM answers WHERE id = ? AND calendar_id = ?", [answerId, cal.id]);
@@ -216,17 +229,19 @@ export async function resetAnswer(fd: FormData) {
 
 export async function addDepartment(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const names = str(fd, "names")
     .split(/\r?\n/)
     .map(cleanName)
     .filter((n) => n.length >= 2);
-  if (!names.length) return { errors: ["Skriv inn minst ett navn."] };
+  if (!names.length) return { errors: [m.namesRequired] };
   const added: string[] = [];
   const skipped: string[] = [];
   for (const name of names) {
     const similar = await findSimilarDepartment(name);
     if (similar) {
-      skipped.push(`${name} (finnes som «${similar.name}»)`);
+      skipped.push(m.existsAs(name, similar.name));
       continue;
     }
     const res = await db.execute("INSERT INTO departments (org_id, name, status, created_at) VALUES (?, ?, 'active', ?)", [env.orgId, name, new Date()]);
@@ -236,24 +251,26 @@ export async function addDepartment(_prev: FormState, fd: FormData): Promise<For
   refresh();
   return {
     ok: added.length > 0,
-    message: added.length ? `La til: ${added.join(", ")}.` : undefined,
-    errors: skipped.length ? [`Hoppet over: ${skipped.join("; ")}`] : undefined,
+    message: added.length ? m.added(added.join(", ")) : undefined,
+    errors: skipped.length ? [`${m.skipped(skipped.join("; "))}`] : undefined,
   };
 }
 
 export async function renameDepartment(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const dept = await getDepartment(Number(str(fd, "department_id")));
   const name = cleanName(str(fd, "name"));
-  if (!dept) return { errors: ["Fant ikke avdelingen."] };
-  if (name.length < 2) return { errors: ["Navnet er for kort."] };
+  if (!dept) return { errors: [m.departmentNotFound] };
+  if (name.length < 2) return { errors: [m.nameTooShort] };
   const all = await listDepartments(["active", "pending", "archived"]);
   const clash = all.find((d) => d.id !== dept.id && nameKey(d.name) === nameKey(name));
-  if (clash) return { errors: [`«${clash.name}» finnes allerede. Slå dem sammen i stedet.`] };
+  if (clash) return { errors: [m.nameClash(clash.name)] };
   await db.execute("UPDATE departments SET name = ? WHERE id = ?", [name, dept.id]);
   await logAudit({ userId: admin.id, action: "department.rename", entity: "department", entityId: dept.id, before: { name: dept.name }, after: { name } });
   refresh();
-  return { ok: true, message: "Lagret." };
+  return { ok: true, message: m.saved };
 }
 
 export async function setDepartmentStatus(fd: FormData) {
@@ -269,14 +286,16 @@ export async function setDepartmentStatus(fd: FormData) {
 
 export async function mergeDepartmentAction(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const from = await getDepartment(Number(str(fd, "from_id")));
   const into = await getDepartment(Number(str(fd, "into_id")));
-  if (!from || !into || from.id === into.id) return { errors: ["Velg to forskjellige avdelinger."] };
-  if (into.status !== "active") return { errors: ["Avdelingen du slår sammen til må være aktiv."] };
+  if (!from || !into || from.id === into.id) return { errors: [m.chooseTwo] };
+  if (into.status !== "active") return { errors: [m.intoMustBeActive] };
   const moved = await mergeDepartments(from.id, into.id, admin.id);
   await invalidateAllScoreboards();
   refresh();
-  return { ok: true, message: `«${from.name}» er slått sammen med «${into.name}» (${moved} medlemskap flyttet).` };
+  return { ok: true, message: m.merged(from.name, into.name, moved) };
 }
 
 async function invalidateAllScoreboards() {
@@ -321,18 +340,20 @@ export async function anonymizeUser(fd: FormData) {
 
 export async function addInvites(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const emails = str(fd, "emails")
     .split(/[\s,;]+/)
     .map(normalizeEmail)
     .filter(Boolean);
   const valid = [...new Set(emails.filter(isValidEmail))];
   const invalid = emails.filter((e) => !isValidEmail(e));
-  if (!valid.length) return { errors: ["Ingen gyldige e-postadresser."] };
+  if (!valid.length) return { errors: [m.noValidEmails] };
   const now = new Date();
   await db.execute("INSERT IGNORE INTO invites (org_id, email, created_at) VALUES ?", [valid.map((e) => [env.orgId, e, now])]);
   await logAudit({ userId: admin.id, action: "invite.add", entity: "invite", after: { count: valid.length } });
   refresh();
-  return { ok: true, message: `${valid.length} adresse(r) lagt til.`, errors: invalid.length ? [`Ugyldige: ${invalid.join(", ")}`] : undefined };
+  return { ok: true, message: m.invitesAdded(valid.length), errors: invalid.length ? [m.invalidEmails(invalid.join(", "))] : undefined };
 }
 
 export async function removeInvite(fd: FormData) {
@@ -349,6 +370,8 @@ export async function removeInvite(fd: FormData) {
 
 export async function saveSettings(_prev: FormState, fd: FormData): Promise<FormState> {
   const admin = await requireAdmin();
+  const t = await getT();
+  const m = t.admin.msg;
   const name = str(fd, "name").slice(0, 200);
   const domains = str(fd, "allowed_email_domains")
     .split(/[\s,;]+/)
@@ -357,10 +380,10 @@ export async function saveSettings(_prev: FormState, fd: FormData): Promise<Form
   const brand = str(fd, "brand_color");
   const logo = str(fd, "logo_url");
   const errors: string[] = [];
-  if (!name) errors.push("Navn må fylles ut.");
-  if (domains.some((d) => !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d))) errors.push("Ugyldig domene i listen.");
-  if (brand && !/^#[0-9a-fA-F]{6}$/.test(brand)) errors.push("Farge må være på formen #1E4A38.");
-  if (logo && !/^https:\/\/\S+$/.test(logo)) errors.push("Logo-URL må starte med https://");
+  if (!name) errors.push(m.orgNameRequired);
+  if (domains.some((d) => !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d))) errors.push(m.invalidDomain);
+  if (brand && !/^#[0-9a-fA-F]{6}$/.test(brand)) errors.push(m.invalidColor);
+  if (logo && !/^https:\/\/\S+$/.test(logo)) errors.push(m.invalidLogo);
   if (errors.length) return { errors };
   const before = await db.queryOne("SELECT name, allowed_email_domains, allow_department_proposals, brand_color, logo_url FROM organizations WHERE id = ?", [env.orgId]);
   const after = {
@@ -377,5 +400,5 @@ export async function saveSettings(_prev: FormState, fd: FormData): Promise<Form
   await logAudit({ userId: admin.id, action: "org.update", entity: "organization", entityId: env.orgId, before, after });
   invalidateOrg();
   refresh();
-  return { ok: true, message: "Innstillingene er lagret." };
+  return { ok: true, message: m.settingsSaved };
 }

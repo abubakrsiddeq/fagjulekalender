@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormAction } from "@/components/useFormAction";
+import { useT } from "@/i18n/client";
 import { moveParticipant, type FormState } from "../actions";
 import { FormMessages } from "./FormMessages";
 
@@ -15,6 +16,7 @@ export function MoveForm({
   currentId: number | null;
   departments: { id: number; name: string }[];
 }) {
+  const a = useT().admin;
   const [state, onSubmit, pending] = useFormAction<FormState>(moveParticipant, {});
   return (
     <form onSubmit={onSubmit} className="stack">
@@ -22,10 +24,10 @@ export function MoveForm({
       <input type="hidden" name="user_id" value={userId} />
       <div className="grid2">
         <div className="field">
-          <label htmlFor="department_id">Ny avdeling</label>
+          <label htmlFor="department_id">{a.move.newDepartment}</label>
           <select id="department_id" name="department_id" defaultValue={currentId ?? ""} required>
             <option value="" disabled>
-              Velg…
+              {a.c.choose}
             </option>
             {departments.map((d) => (
               <option key={d.id} value={d.id}>
@@ -35,14 +37,14 @@ export function MoveForm({
           </select>
         </div>
         <div className="field">
-          <label htmlFor="move-reason">Begrunnelse (logges)</label>
+          <label htmlFor="move-reason">{a.move.reason}</label>
           <input id="move-reason" name="reason" type="text" required maxLength={500} />
         </div>
       </div>
       <FormMessages state={state} />
       <div className="row">
         <button className="btn" type="submit" disabled={pending}>
-          Flytt deltaker
+          {a.move.submit}
         </button>
       </div>
     </form>

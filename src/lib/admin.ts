@@ -3,6 +3,8 @@ import { db, isDuplicateKey, transaction } from "./db";
 import { env } from "./env";
 import { logAudit } from "./audit";
 import { getCalendarById } from "./calendar";
+import { getT } from "@/i18n/server";
+import type { Dictionary } from "@/i18n";
 import { addDays, fromLocalInput, isValidTimeZone, localHm, localYmd, toLocalInput, zonedTimeToUtc } from "./time";
 import type { Calendar } from "./types";
 
@@ -83,30 +85,32 @@ export function defaultCalendarInput(now = new Date()): CalendarInput {
   };
 }
 
-function validateCalendar(input: CalendarInput): { errors: string[]; closesAt: Date | null } {
+function validateCalendar(input: CalendarInput, t: Dictionary): { errors: string[]; closesAt: Date | null } {
+  const v = t.admin.validation;
+  const f = t.admin.calForm;
   const errors: string[] = [];
-  if (!input.name || input.name.length > 200) errors.push("Navn må fylles ut (maks 200 tegn).");
-  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) errors.push("Lenke-navn kan bare ha små bokstaver a–z, tall og bindestrek.");
-  if (!Number.isInteger(input.year) || input.year < 2020 || input.year > 2100) errors.push("Ugyldig år.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) errors.push("Ugyldig startdato.");
-  if (!Number.isInteger(input.doorCount) || input.doorCount < 1 || input.doorCount > 31) errors.push("Antall luker må være 1–31.");
-  if (!isValidTimeZone(input.timezone)) errors.push("Ugyldig tidssone.");
-  for (const [label, v] of [
-    ["Poeng for riktig svar", input.pointsCorrect],
-    ["Bonus", input.sameDayBonus],
-    ["Minimum antall svar", input.minAnswersToCount],
+  if (!input.name || input.name.length > 200) errors.push(v.calName);
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(input.slug)) errors.push(v.slug);
+  if (!Number.isInteger(input.year) || input.year < 2020 || input.year > 2100) errors.push(v.year);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) errors.push(v.startDate);
+  if (!Number.isInteger(input.doorCount) || input.doorCount < 1 || input.doorCount > 31) errors.push(v.doorCount);
+  if (!isValidTimeZone(input.timezone)) errors.push(v.timezone);
+  for (const [label, value] of [
+    [f.points, input.pointsCorrect],
+    [f.bonus, input.sameDayBonus],
+    [f.minAnswers, input.minAnswersToCount],
   ] as const) {
-    if (!Number.isInteger(v) || v < 0 || v > 1000) errors.push(`${label} må være et heltall fra 0.`);
+    if (!Number.isInteger(value) || value < 0 || value > 1000) errors.push(v.wholeNumber(label));
   }
-  if (input.notifyTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.notifyTime)) errors.push("Ugyldig tidspunkt for e-post.");
+  if (input.notifyTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.notifyTime)) errors.push(v.notifyTime);
   let closesAt: Date | null = null;
   if (!errors.length) {
     const parsed = fromLocalInput(input.closesAtLocal, input.timezone);
-    if (!parsed) errors.push("Ugyldig stengetidspunkt.");
+    if (!parsed) errors.push(v.closesAt);
     else {
       closesAt = new Date(parsed.getTime() + 59_000); // inclusive minute: 23:59 → 23:59:59
       const lastDoor = zonedTimeToUtc(addDays(input.startDate, input.doorCount - 1), "00:00", input.timezone);
-      if (closesAt <= lastDoor) errors.push("Kalenderen må stenge etter at siste luke har åpnet.");
+      if (closesAt <= lastDoor) errors.push(v.closesBeforeLast);
     }
   }
   return { errors, closesAt };
@@ -131,7 +135,8 @@ function calendarValues(input: CalendarInput, closesAt: Date) {
 }
 
 export async function createCalendar(input: CalendarInput, actorId: number): Promise<{ id: number } | { errors: string[] }> {
-  const { errors, closesAt } = validateCalendar(input);
+  const t = await getT();
+  const { errors, closesAt } = validateCalendar(input, t);
   if (errors.length) return { errors };
   try {
     const res = await db.execute(
@@ -143,7 +148,7 @@ export async function createCalendar(input: CalendarInput, actorId: number): Pro
     await logAudit({ userId: actorId, action: "calendar.create", entity: "calendar", entityId: res.insertId, after: input });
     return { id: res.insertId };
   } catch (err) {
-    if (isDuplicateKey(err)) return { errors: [`Lenke-navnet «${input.slug}» er allerede i bruk.`] };
+    if (isDuplicateKey(err)) return { errors: [t.admin.validation.slugTaken(input.slug)] };
     throw err;
   }
 }
@@ -154,12 +159,13 @@ export async function countAnswers(calendarId: number): Promise<number> {
 }
 
 export async function updateCalendar(cal: Calendar, input: CalendarInput, actorId: number): Promise<{ ok: true } | { errors: string[] }> {
-  const { errors, closesAt } = validateCalendar(input);
+  const t = await getT();
+  const { errors, closesAt } = validateCalendar(input, t);
   if (errors.length) return { errors };
   if ((await countAnswers(cal.id)) > 0) {
     // Moving doors after people have answered would change which answers were on time.
     if (input.startDate !== cal.start_date || input.doorCount !== cal.door_count || input.timezone !== cal.timezone) {
-      return { errors: ["Startdato, antall luker og tidssone kan ikke endres etter at noen har svart."] };
+      return { errors: [t.admin.validation.scheduleLocked] };
     }
   }
   try {
@@ -170,7 +176,7 @@ export async function updateCalendar(cal: Calendar, input: CalendarInput, actorI
       [...calendarValues(input, closesAt!), cal.id, env.orgId],
     );
   } catch (err) {
-    if (isDuplicateKey(err)) return { errors: [`Lenke-navnet «${input.slug}» er allerede i bruk.`] };
+    if (isDuplicateKey(err)) return { errors: [t.admin.validation.slugTaken(input.slug)] };
     throw err;
   }
   await logAudit({ userId: actorId, action: "calendar.update", entity: "calendar", entityId: cal.id, before: calendarToInput(cal), after: input });
@@ -179,8 +185,9 @@ export async function updateCalendar(cal: Calendar, input: CalendarInput, actorI
 
 /** FR-8.1: copies settings and questions (not answers) into a new draft for another year. */
 export async function copyCalendar(cal: Calendar, year: number, slug: string, actorId: number): Promise<{ id: number } | { errors: string[] }> {
-  if (!Number.isInteger(year) || year < 2020 || year > 2100) return { errors: ["Ugyldig år."] };
-  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) return { errors: ["Ugyldig lenke-navn."] };
+  const t = await getT();
+  if (!Number.isInteger(year) || year < 2020 || year > 2100) return { errors: [t.admin.validation.year] };
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(slug)) return { errors: [t.admin.validation.invalidSlug] };
   const shift = year - cal.year;
   const shiftYear = (ymd: string) => `${Number(ymd.slice(0, 4)) + shift}${ymd.slice(4)}`;
   const closesLocal = toLocalInput(cal.closes_at, cal.timezone);
@@ -215,7 +222,7 @@ export async function copyCalendar(cal: Calendar, year: number, slug: string, ac
     });
     return { id: newId };
   } catch (err) {
-    if (isDuplicateKey(err)) return { errors: [`Lenke-navnet «${slug}» er allerede i bruk.`] };
+    if (isDuplicateKey(err)) return { errors: [t.admin.validation.slugTaken(slug)] };
     throw err;
   }
 }

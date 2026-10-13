@@ -1,13 +1,17 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { listDepartments } from "@/lib/departments";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 import { setDepartmentStatus } from "../actions";
 import { AddDepartmentForm, MergeForm, RenameForm } from "../_components/DepartmentForms";
 
-export const metadata = { title: "Avdelinger" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.departments.title };
+}
 
 export default function DepartmentsPage() {
   return (
@@ -17,10 +21,10 @@ export default function DepartmentsPage() {
   );
 }
 
-const LABEL = { active: "Aktiv", pending: "Venter på godkjenning", archived: "Arkivert" } as const;
-
 async function Content() {
   await requireAdmin("/admin/avdelinger");
+  const a = (await getT()).admin;
+  const d$ = a.departments;
   const departments = await listDepartments(["pending", "active", "archived"]);
   const counts = await db.query<{ department_id: number; n: number }>(
     `SELECT m.department_id, COUNT(*) AS n FROM memberships m JOIN calendars c ON c.id = m.calendar_id
@@ -29,22 +33,22 @@ async function Content() {
   );
   const members = new Map(counts.map((c) => [c.department_id, Number(c.n)]));
   const order = { pending: 0, active: 1, archived: 2 } as const;
-  departments.sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, "nb"));
+  departments.sort((x, y) => order[x.status] - order[y.status] || x.name.localeCompare(y.name, "nb"));
 
   return (
     <>
-      <h1>Avdelinger</h1>
-      <p className="muted">Avdelingene gjelder for alle kalendere. Forslag fra deltakere vises øverst til de er godkjent.</p>
+      <h1>{d$.title}</h1>
+      <p className="muted">{d$.intro}</p>
       <section className="panel tbl">
         <table>
           <thead>
             <tr>
-              <th scope="col">Avdeling</th>
-              <th scope="col">Status</th>
+              <th scope="col">{a.c.department}</th>
+              <th scope="col">{a.c.status}</th>
               <th scope="col" className="num">
-                Medlemmer
+                {d$.members}
               </th>
-              <th scope="col">Handlinger</th>
+              <th scope="col">{a.c.actions}</th>
             </tr>
           </thead>
           <tbody>
@@ -57,7 +61,7 @@ async function Content() {
                   </details>
                 </td>
                 <td>
-                  <span className={`badge ${d.status === "active" ? "ok" : d.status === "pending" ? "warn" : ""}`}>{LABEL[d.status]}</span>
+                  <span className={`badge ${d.status === "active" ? "ok" : d.status === "pending" ? "warn" : ""}`}>{a.deptStatus[d.status]}</span>
                 </td>
                 <td className="num">{members.get(d.id) ?? 0}</td>
                 <td>
@@ -65,11 +69,11 @@ async function Content() {
                     <input type="hidden" name="department_id" value={d.id} />
                     {d.status === "active" ? (
                       <button className="btn ghost small" type="submit" name="status" value="archived">
-                        Arkiver
+                        {d$.archive}
                       </button>
                     ) : (
                       <button className="btn ghost small" type="submit" name="status" value="active">
-                        {d.status === "pending" ? "Godkjenn" : "Gjenopprett"}
+                        {d.status === "pending" ? d$.approve : d$.restore}
                       </button>
                     )}
                   </form>
@@ -81,11 +85,11 @@ async function Content() {
       </section>
       <div className="top">
         <section className="panel" aria-labelledby="add-h">
-          <h2 id="add-h">Legg til</h2>
+          <h2 id="add-h">{d$.addTitle}</h2>
           <AddDepartmentForm />
         </section>
         <section className="panel" aria-labelledby="merge-h">
-          <h2 id="merge-h">Slå sammen duplikater</h2>
+          <h2 id="merge-h">{d$.mergeTitle}</h2>
           <MergeForm departments={departments.map((d) => ({ id: d.id, name: d.name, status: d.status }))} />
         </section>
       </div>

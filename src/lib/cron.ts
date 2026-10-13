@@ -4,6 +4,7 @@ import { env } from "./env";
 import { answerBlock, listCalendars, todayDoor } from "./calendar";
 import { escapeHtml, sendMail } from "./mail";
 import { localHm } from "./time";
+import { getDictionary } from "@/i18n";
 import type { Calendar } from "./types";
 
 // Called by a scheduled job (Hostinger hPanel → Cron Jobs), e.g. every 10 minutes:
@@ -39,8 +40,8 @@ export async function claimDailyReminders(now: Date): Promise<ReminderJob[]> {
 
 export async function sendReminders(job: ReminderJob): Promise<number> {
   const { calendar: cal, door, questionId } = job;
-  const recipients = await db.query<{ email: string; display_name: string }>(
-    `SELECT u.email, u.display_name FROM memberships m JOIN users u ON u.id = m.user_id
+  const recipients = await db.query<{ email: string; display_name: string; locale: string }>(
+    `SELECT u.email, u.display_name, u.locale FROM memberships m JOIN users u ON u.id = m.user_id
       WHERE m.calendar_id = ? AND u.notify_daily = 1 AND u.anonymized_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM answers a WHERE a.question_id = ? AND a.user_id = u.id)`,
     [cal.id, questionId],
@@ -49,12 +50,14 @@ export async function sendReminders(job: ReminderJob): Promise<number> {
   const profile = `${env.appUrl}/profil`;
   let sent = 0;
   for (const r of recipients) {
+    // Each participant gets the e-mail in the language they last used in the app.
+    const m = getDictionary(r.locale).email;
     try {
       await sendMail({
         to: r.email,
-        subject: `Luke ${door} er åpen – ${cal.name}`,
-        text: `Hei ${r.display_name}!\n\nDagens luke i ${cal.name} er åpen. Det tar under ett minutt:\n${link}\n\nVil du ikke ha disse e-postene? Skru dem av her: ${profile}`,
-        html: `<p>Hei ${escapeHtml(r.display_name)}!</p><p>Dagens luke i ${escapeHtml(cal.name)} er åpen. Det tar under ett minutt.</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#1e4a38;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Åpne luke ${door}</a></p><p style="font-size:13px;color:#56655d">Vil du ikke ha disse e-postene? <a href="${escapeHtml(profile)}">Skru dem av i profilen din</a>.</p>`,
+        subject: m.reminderSubject(door, cal.name),
+        text: `${m.reminderGreeting(r.display_name)}\n\n${m.reminderBody(cal.name)}\n${link}\n\n${m.reminderOptOut} ${profile}`,
+        html: `<p>${escapeHtml(m.reminderGreeting(r.display_name))}</p><p>${escapeHtml(m.reminderBody(cal.name))}</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#1e4a38;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(m.reminderButton(door))}</a></p><p style="font-size:13px;color:#56655d">${escapeHtml(m.reminderOptOut)} <a href="${escapeHtml(profile)}">${escapeHtml(profile)}</a></p>`,
       });
       sent++;
     } catch (err) {

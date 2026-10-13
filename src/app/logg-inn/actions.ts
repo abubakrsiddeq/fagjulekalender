@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { clientIp, safeReturnPath } from "@/lib/auth";
 import { normalizeEmail, requestLoginCode, verifyLoginCode } from "@/lib/login";
 import { rateLimit } from "@/lib/ratelimit";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
 export interface LoginState {
   step: "email" | "code";
@@ -19,6 +19,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   const next = safeReturnPath(String(formData.get("next") ?? "/"));
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const ip = await clientIp();
+  const t = await getT();
 
   if (intent === "restart") return { step: "email", email: "", next };
 

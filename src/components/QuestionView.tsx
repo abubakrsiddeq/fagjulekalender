@@ -1,5 +1,7 @@
+"use client";
+
 // Presentational pieces shared by the server-rendered door page and the client answer form.
-import { t } from "@/i18n";
+import { useT } from "@/i18n/client";
 
 export interface ViewOption {
   id: number;
@@ -18,8 +20,9 @@ export interface ViewResult {
 }
 
 export function StaticOptions({ options, result }: { options: ViewOption[]; result: ViewResult | null }) {
+  const t = useT();
   return (
-    <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0, gap: 8 }} aria-label="Svaralternativer">
+    <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0, gap: 8 }} aria-label={t.question.optionsLabel}>
       {options.map((o) => {
         const isCorrect = result && o.id === result.correctOptionId;
         const pickedWrong = result && result.optionId === o.id && !isCorrect;
@@ -48,11 +51,12 @@ export function StaticOptions({ options, result }: { options: ViewOption[]; resu
 }
 
 export function ResultBox({ result, preview = false, headingRef }: { result: ViewResult; preview?: boolean; headingRef?: React.Ref<HTMLHeadingElement> }) {
+  const t = useT();
   const ok = preview || result.isCorrect;
   return (
     <div className={`result ${ok ? "ok" : "no"}`}>
       <h2 ref={headingRef} tabIndex={-1} style={{ fontSize: "1.15rem" }}>
-        {preview ? "Forhåndsvisning – riktig svar er markert" : result.isCorrect ? t.question.correctTitle(result.points) : t.question.wrongTitle}
+        {preview ? t.question.previewTitle : result.isCorrect ? t.question.correctTitle(result.points) : t.question.wrongTitle}
       </h2>
       <p>{result.explanation}</p>
       {(result.sourceTitle || result.sourceEqsId) && (

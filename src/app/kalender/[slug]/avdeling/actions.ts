@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { getDepartment, proposeDepartment, setMembership } from "@/lib/departments";
 import { invalidateScoreboard } from "@/lib/leaderboard";
 import { getOrg } from "@/lib/org";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
 export interface JoinState {
   ok?: boolean;
@@ -19,6 +19,7 @@ export interface JoinState {
 export async function joinDepartment(slug: string, _prev: JoinState, formData: FormData): Promise<JoinState> {
   const user = await getCurrentUser();
   if (!user) redirect(`/logg-inn?neste=${encodeURIComponent(`/kalender/${slug}/avdeling`)}`);
+  const t = await getT();
   const cal = await getCalendarBySlug(slug);
   if (!cal || !canSeeCalendar(cal, user) || cal.status === "archived") return { error: t.common.error };
 

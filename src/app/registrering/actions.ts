@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { refresh } from "next/cache";
 import { getCurrentUser, safeReturnPath } from "@/lib/auth";
 import { parseRegistration, saveRegistration } from "@/lib/registration";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
 export interface RegistrationState {
   ok?: boolean;
@@ -16,6 +16,7 @@ export interface RegistrationState {
 export async function saveRegistrationAction(mode: "register" | "profile", _prev: RegistrationState, fd: FormData): Promise<RegistrationState> {
   const user = await getCurrentUser();
   if (!user) redirect("/logg-inn?neste=/registrering");
+  const t = await getT();
   const res = await saveRegistration(user, parseRegistration(fd));
   if (!res.ok) return { errors: res.errors };
   if (mode === "register") {

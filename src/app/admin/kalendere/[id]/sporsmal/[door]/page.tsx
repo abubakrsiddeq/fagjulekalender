@@ -8,11 +8,15 @@ import { doorDate } from "@/lib/calendar";
 import { answerCounts, getQuestion, isDoorLocked } from "@/lib/questions";
 import { formatDayMonth } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
+import type { Metadata } from "next";
 import { deleteQuestionAction } from "../../../../actions";
 import { CalendarAdminNav } from "../../../../_components/CalendarAdminNav";
 import { QuestionEditor, type EditorValues } from "../../../../_components/QuestionEditor";
 
-export const metadata = { title: "Rediger spørsmål" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.questions.editTitle };
+}
 
 export default function QuestionEditPage(props: PageProps<"/admin/kalendere/[id]/sporsmal/[door]">) {
   return (
@@ -35,6 +39,8 @@ async function Content({
   const door = Number(doorParam);
   if (!cal || !Number.isInteger(door) || door < 1 || door > cal.door_count) notFound();
   const sp = await searchParams;
+  const t = await getT();
+  const a = t.admin;
 
   const q = await getQuestion(cal.id, door);
   const answers = q ? (await answerCounts(cal.id)).get(q.id) ?? 0 : 0;
@@ -72,14 +78,14 @@ async function Content({
       <CalendarAdminNav id={cal.id} name={cal.name} active="questions" />
       <div className="panel-head">
         <h1>
-          Luke {door} · {formatDayMonth(doorDate(cal, door))}
+          {a.c.door(door)} · {formatDayMonth(doorDate(cal, door), t.lang)}
         </h1>
         <div className="row">
-          {door > 1 && <Link href={`/admin/kalendere/${cal.id}/sporsmal/${door - 1}`}>← Luke {door - 1}</Link>}
-          {door < cal.door_count && <Link href={`/admin/kalendere/${cal.id}/sporsmal/${door + 1}`}>Luke {door + 1} →</Link>}
+          {door > 1 && <Link href={`/admin/kalendere/${cal.id}/sporsmal/${door - 1}`}>← {a.c.door(door - 1)}</Link>}
+          {door < cal.door_count && <Link href={`/admin/kalendere/${cal.id}/sporsmal/${door + 1}`}>{a.c.door(door + 1)} →</Link>}
         </div>
       </div>
-      {sp.lagret === "1" && <p className="success">Spørsmålet er lagret.</p>}
+      {sp.lagret === "1" && <p className="success">{a.questions.saved}</p>}
       {typeof sp.feil === "string" && <p className="alert">{sp.feil}</p>}
       <div className="panel">
         <QuestionEditor
@@ -96,14 +102,14 @@ async function Content({
       {q && (
         <div className="row">
           <Link className="btn ghost" href={`/admin/kalendere/${cal.id}/forhandsvisning/${door}`}>
-            Forhåndsvis
+            {a.questions.preview}
           </Link>
           {answers === 0 && (
             <form action={deleteQuestionAction}>
               <input type="hidden" name="calendar_id" value={cal.id} />
               <input type="hidden" name="door" value={door} />
               <button className="btn danger" type="submit">
-                Slett spørsmål
+                {a.questions.delete}
               </button>
             </form>
           )}

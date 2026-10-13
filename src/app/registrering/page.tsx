@@ -4,11 +4,15 @@ import { requireUser, safeReturnPath } from "@/lib/auth";
 import { registrationFormData, registrationInitial } from "@/lib/registration";
 import { Loading } from "@/components/Loading";
 import { RegistrationForm } from "./RegistrationForm";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: t.registration.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.registration.title };
+}
 
-export default function RegistrationPage(props: PageProps<"/registrering">) {
+export default async function RegistrationPage(props: PageProps<"/registrering">) {
+  const t = await getT();
   return (
     <div className="wrap narrow" style={{ maxWidth: 640 }}>
       <h1>{t.registration.title}</h1>
@@ -27,6 +31,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/registrerin
   const next = safeReturnPath(typeof sp.neste === "string" ? sp.neste : "/");
   const user = await requireUser(`/registrering?neste=${encodeURIComponent(next)}`);
   const data = await registrationFormData(user);
+  const t = await getT();
   return (
     <>
       <p className="small">

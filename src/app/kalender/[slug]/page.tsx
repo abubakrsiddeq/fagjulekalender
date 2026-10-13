@@ -8,7 +8,8 @@ import { CalendarNav } from "@/components/CalendarNav";
 import { Loading } from "@/components/Loading";
 import { ScrollTable } from "@/components/ScrollTable";
 import { DepartmentPicker } from "./avdeling/DepartmentPicker";
-import { t, locale } from "@/i18n";
+import { getT } from "@/i18n/server";
+import type { Dictionary } from "@/i18n";
 
 export default function CalendarPage(props: PageProps<"/kalender/[slug]">) {
   return (
@@ -20,16 +21,17 @@ export default function CalendarPage(props: PageProps<"/kalender/[slug]">) {
   );
 }
 
-const fmt = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 1 });
 
 async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]">["params"] }) {
   const { slug } = await params;
   const { user, cal, membership } = await loadCalendarPage(slug, `/kalender/${slug}`);
+  const t = await getT();
+  const fmt = (n: number) => n.toLocaleString(t.intl, { maximumFractionDigits: 1 });
   if (!membership && cal.status === "published") {
     return (
       <>
         <header className="page-head">
-          <span className="eyebrow">Advent {cal.year}</span>
+          <span className="eyebrow">{t.calendar.eyebrow(cal.year)}</span>
           <h1>{cal.name}</h1>
           <p>{t.department.intro}</p>
         </header>
@@ -54,13 +56,13 @@ async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]
   if (cal.status === "draft") status = t.calendar.draft;
   else if (isClosed(cal, now) || cal.status === "archived") status = t.calendar.closed;
   else if (today) status = t.calendar.todayDoor(today);
-  else if (now < doorOpensAt(cal, 1)) status = t.calendar.beforeStart(`${formatDayMonth(cal.start_date)} ${cal.year}`);
+  else if (now < doorOpensAt(cal, 1)) status = t.calendar.beforeStart(`${formatDayMonth(cal.start_date, t.lang)} ${cal.year}`);
   else status = t.calendar.afterEnd;
 
   return (
     <>
       <header className="page-head">
-        <span className="eyebrow">Advent {cal.year}</span>
+        <span className="eyebrow">{t.calendar.eyebrow(cal.year)}</span>
         <h1>{cal.name}</h1>
         <p>{status}</p>
       </header>
@@ -68,13 +70,13 @@ async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]
 
       {cal.status === "draft" && (
         <p className="note">
-          {t.calendar.draft} <Link href={`/admin/kalendere/${cal.id}/forhandsvisning`}>Forhåndsvis lukene i admin</Link>.
+          {t.calendar.draft} <Link href={`/admin/kalendere/${cal.id}/forhandsvisning`}>{t.calendar.previewInAdmin}</Link>.
         </p>
       )}
 
       <section className="top">
         <div className="panel" aria-labelledby="me-h">
-          <h2 id="me-h">Din deltakelse</h2>
+          <h2 id="me-h">{t.calendar.participation}</h2>
           {membership ? (
             <p className="small">
               {t.calendar.competingFor} <b>{membership.department_name}</b>
@@ -125,7 +127,7 @@ async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]
           <div className="panel-head">
             <h2 id="lb-h">{t.results.title}</h2>
             <Link className="small" href={`/kalender/${slug}/resultater`}>
-              Se alle
+              {t.calendar.seeAll}
             </Link>
           </div>
           {board.departments.length === 0 ? (
@@ -170,7 +172,7 @@ async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]
         <ol className="doors">
           {progress.doors.map((d) => (
             <li key={d.door}>
-              <Door slug={slug} info={d} />
+              <Door slug={slug} info={d} t={t} />
             </li>
           ))}
         </ol>
@@ -184,16 +186,16 @@ async function CalendarContent({ params }: { params: PageProps<"/kalender/[slug]
   );
 }
 
-function Door({ slug, info }: { slug: string; info: DoorInfo }) {
-  const date = formatDayMonth(info.date);
+function Door({ slug, info, t }: { slug: string; info: DoorInfo; t: Dictionary }) {
+  const date = formatDayMonth(info.date, t.lang);
   const cls = `door ${info.state}${info.isToday ? " today" : ""}`;
   const srState = `${t.calendar.door} ${info.door}, ${t.calendar.state[info.state]}${info.state === "locked" ? `, ${t.calendar.opensOn(date)}` : ""}${
-    info.isToday ? ", i dag" : ""
+    info.isToday ? `, ${t.calendar.today}` : ""
   }`;
   let label: string;
   switch (info.state) {
     case "locked":
-      label = formatDayMonthShort(info.date);
+      label = formatDayMonthShort(info.date, t.lang);
       break;
     case "ready":
       label = info.topic ?? "";

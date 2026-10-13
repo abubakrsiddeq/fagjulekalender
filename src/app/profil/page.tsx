@@ -4,11 +4,15 @@ import { requireUser } from "@/lib/auth";
 import { registrationFormData, registrationInitial } from "@/lib/registration";
 import { Loading } from "@/components/Loading";
 import { RegistrationForm } from "../registrering/RegistrationForm";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: t.profile.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.profile.title };
+}
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const t = await getT();
   return (
     <div className="wrap narrow" style={{ maxWidth: 640 }}>
       <h1>{t.profile.title}</h1>
@@ -24,6 +28,7 @@ export default function ProfilePage() {
 async function ProfileContent() {
   const user = await requireUser("/profil");
   const data = await registrationFormData(user);
+  const t = await getT();
   return (
     <>
       <p className="small">

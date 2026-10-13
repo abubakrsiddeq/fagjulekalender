@@ -4,8 +4,12 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
+import type { Metadata } from "next";
 
-export const metadata = { title: "Endringslogg" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.audit.title };
+}
 
 export default function AuditPage(props: PageProps<"/admin/logg">) {
   return (
@@ -24,6 +28,7 @@ function short(json: string | null): string {
 
 async function Content({ searchParams }: { searchParams: PageProps<"/admin/logg">["searchParams"] }) {
   await requireAdmin("/admin/logg");
+  const l = (await getT()).admin.audit;
   const sp = await searchParams;
   const entity = typeof sp.type === "string" && ENTITIES.includes(sp.type) ? sp.type : "";
   const rows = await db.query<{
@@ -46,12 +51,12 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/logg"
 
   return (
     <>
-      <h1>Endringslogg</h1>
-      <p className="muted">Spørsmålsendringer, flytting av deltakere, nullstilte svar og andre administratorhandlinger. Viser de siste 300.</p>
+      <h1>{l.title}</h1>
+      <p className="muted">{l.intro}</p>
       <form className="inline-form">
-        <label htmlFor="type">Vis</label>
+        <label htmlFor="type">{l.show}</label>
         <select id="type" name="type" defaultValue={entity}>
-          <option value="">Alt</option>
+          <option value="">{l.all}</option>
           {ENTITIES.map((e) => (
             <option key={e} value={e}>
               {e}
@@ -59,21 +64,21 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/logg"
           ))}
         </select>
         <button className="btn ghost small" type="submit">
-          Filtrer
+          {l.filter}
         </button>
       </form>
       <section className="panel tbl">
         {rows.length === 0 ? (
-          <p className="empty">Ingen hendelser.</p>
+          <p className="empty">{l.none}</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th scope="col">Tid</th>
-                <th scope="col">Hvem</th>
-                <th scope="col">Hendelse</th>
-                <th scope="col">Begrunnelse</th>
-                <th scope="col">Detaljer</th>
+                <th scope="col">{l.time}</th>
+                <th scope="col">{l.who}</th>
+                <th scope="col">{l.event}</th>
+                <th scope="col">{l.reason}</th>
+                <th scope="col">{l.details}</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +87,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/logg"
                   <td className="small" style={{ whiteSpace: "nowrap" }}>
                     {formatDateTime(r.at, "Europe/Oslo")}
                   </td>
-                  <td>{r.actor ?? "System"}</td>
+                  <td>{r.actor ?? l.system}</td>
                   <td>
                     <code>{r.action}</code>
                     {r.entity_id && <div className="small">#{r.entity_id}</div>}
@@ -91,16 +96,16 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/logg"
                   <td>
                     {(r.before_data || r.after_data) && (
                       <details>
-                        <summary className="small">Vis</summary>
+                        <summary className="small">{l.show}</summary>
                         {r.before_data && (
                           <>
-                            <p className="small">Før:</p>
+                            <p className="small">{l.before}</p>
                             <pre className="prewrap">{short(r.before_data)}</pre>
                           </>
                         )}
                         {r.after_data && (
                           <>
-                            <p className="small">Etter:</p>
+                            <p className="small">{l.after}</p>
                             <pre className="prewrap">{short(r.after_data)}</pre>
                           </>
                         )}

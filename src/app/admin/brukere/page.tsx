@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { allowedDomains, getOrg } from "@/lib/org";
 import { formatDateTime } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 import { anonymizeUser, removeInvite, setUserRole } from "../actions";
 import { InviteForm } from "../_components/InviteForm";
+import type { Role } from "@/lib/types";
 
-export const metadata = { title: "Brukere og tilgang" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.users.title };
+}
 
 export default function UsersPage(props: PageProps<"/admin/brukere">) {
   return (
@@ -19,14 +24,12 @@ export default function UsersPage(props: PageProps<"/admin/brukere">) {
   );
 }
 
-const ROLES = [
-  { value: "participant", label: "Deltaker" },
-  { value: "lead", label: "Avdelingsleder" },
-  { value: "admin", label: "Administrator" },
-];
+const ROLES: Role[] = ["participant", "lead", "admin"];
 
 async function Content({ searchParams }: { searchParams: PageProps<"/admin/brukere">["searchParams"] }) {
   const admin = await requireAdmin("/admin/brukere");
+  const a = (await getT()).admin;
+  const u$ = a.users;
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const like = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
@@ -34,7 +37,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
     id: number;
     email: string;
     display_name: string;
-    role: string;
+    role: Role;
     kommune: string | null;
     bydel: string | null;
     ressursnummer: string | null;
@@ -52,35 +55,26 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
 
   return (
     <>
-      <h1>Brukere og tilgang</h1>
+      <h1>{u$.title}</h1>
 
       <section className="panel" aria-labelledby="rule-h">
-        <h2 id="rule-h">Hvem kan logge inn?</h2>
+        <h2 id="rule-h">{u$.whoTitle}</h2>
         <p>
-          {domains.length ? (
-            <>
-              Alle med e-post på <b>{domains.map((d) => "@" + d).join(", ")}</b>
-              {invites.length ? `, og ${invites.length} inviterte adresser` : ""}.
-            </>
-          ) : invites.length ? (
-            <>Bare de {invites.length} adressene på invitasjonslisten.</>
-          ) : (
-            <>Alle (ingen domene- eller invitasjonsregel er satt).</>
-          )}{" "}
-          Eksisterende brukere og ADMIN_EMAILS kan alltid logge inn. Domener endres under <Link href="/admin/innstillinger">Innstillinger</Link>.
+          {domains.length ? u$.whoDomains(domains.map((d) => "@" + d).join(", "), invites.length) : invites.length ? u$.whoInvites(invites.length) : u$.whoOpen}{" "}
+          {u$.whoNote} <Link href="/admin/innstillinger">{u$.settingsLink}</Link>.
         </p>
       </section>
 
       <section className="panel" aria-labelledby="users-h">
         <div className="panel-head">
-          <h2 id="users-h">Brukere</h2>
+          <h2 id="users-h">{u$.usersTitle}</h2>
           <form className="inline-form" role="search">
             <label htmlFor="q" className="sr-only">
-              Søk etter navn, e-post eller ressursnummer
+              {u$.searchLabel}
             </label>
-            <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn, e-post, ressursnr." />
+            <input id="q" name="q" type="search" defaultValue={q} placeholder={u$.searchPlaceholder} />
             <button className="btn ghost small" type="submit">
-              Søk
+              {a.c.search}
             </button>
           </form>
         </div>
@@ -88,14 +82,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
           <table>
             <thead>
               <tr>
-                <th scope="col">Navn</th>
-                <th scope="col">E-post</th>
-                <th scope="col">Kommune / bydel</th>
-                <th scope="col">Ressursnr.</th>
-                <th scope="col">Rolle</th>
-                <th scope="col">Sist innlogget</th>
+                <th scope="col">{a.c.name}</th>
+                <th scope="col">{a.c.email}</th>
+                <th scope="col">{a.c.kommuneBydel}</th>
+                <th scope="col">{a.c.ressursnr}</th>
+                <th scope="col">{u$.role}</th>
+                <th scope="col">{u$.lastLogin}</th>
                 <th scope="col">
-                  <span className="sr-only">Personvern</span>
+                  <span className="sr-only">{u$.privacy}</span>
                 </th>
               </tr>
             </thead>
@@ -104,24 +98,26 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
                 <tr key={u.id}>
                   <td>{u.display_name}</td>
                   <td className="small">{u.email}</td>
-                  <td className="small">{u.registered_at ? [u.kommune, u.bydel].filter(Boolean).join(" / ") : <span className="badge warn">Ikke registrert</span>}</td>
+                  <td className="small">
+                    {u.registered_at ? [u.kommune, u.bydel].filter(Boolean).join(" / ") : <span className="badge warn">{a.c.notRegistered}</span>}
+                  </td>
                   <td className="small">{u.ressursnummer ?? "–"}</td>
                   <td>
                     <form action={setUserRole} className="inline-form">
                       <input type="hidden" name="user_id" value={u.id} />
                       <label className="sr-only" htmlFor={`role-${u.id}`}>
-                        Rolle for {u.display_name}
+                        {u$.roleFor(u.display_name)}
                       </label>
                       <select id={`role-${u.id}`} name="role" defaultValue={u.role} disabled={u.id === admin.id}>
                         {ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
+                          <option key={r} value={r}>
+                            {a.roles[r]}
                           </option>
                         ))}
                       </select>
                       {u.id !== admin.id && (
                         <button className="btn ghost small" type="submit">
-                          Lagre
+                          {a.c.save}
                         </button>
                       )}
                     </form>
@@ -132,7 +128,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
                       <form action={anonymizeUser}>
                         <input type="hidden" name="user_id" value={u.id} />
                         <button className="linkbtn small" type="submit">
-                          Anonymiser
+                          {u$.anonymize}
                         </button>
                       </form>
                     )}
@@ -142,18 +138,18 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
             </tbody>
           </table>
         </div>
-        <p className="small">Anonymisering fjerner navn og e-post, men beholder svarene i statistikken. Den kan ikke angres.</p>
+        <p className="small">{u$.anonymizeNote}</p>
       </section>
 
       <div className="top">
         <section className="panel" aria-labelledby="inv-h">
-          <h2 id="inv-h">Invitasjonsliste</h2>
+          <h2 id="inv-h">{u$.invitesTitle}</h2>
           <InviteForm />
         </section>
         <section className="panel" aria-labelledby="invlist-h">
-          <h2 id="invlist-h">Inviterte ({invites.length})</h2>
+          <h2 id="invlist-h">{u$.invitedTitle(invites.length)}</h2>
           {invites.length === 0 ? (
-            <p className="empty">Ingen inviterte.</p>
+            <p className="empty">{u$.noInvites}</p>
           ) : (
             <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0, gap: 4, maxHeight: 360, overflowY: "auto" }}>
               {invites.map((i) => (
@@ -161,8 +157,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin/bruke
                   <span className="small">{i.email}</span>
                   <form action={removeInvite}>
                     <input type="hidden" name="email" value={i.email} />
-                    <button className="linkbtn small" type="submit" aria-label={`Fjern ${i.email}`}>
-                      Fjern
+                    <button className="linkbtn small" type="submit" aria-label={u$.removeLabel(i.email)}>
+                      {u$.remove}
                     </button>
                   </form>
                 </li>

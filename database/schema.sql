@@ -63,6 +63,7 @@ CREATE TABLE users (
   role           ENUM('participant','lead','admin') NOT NULL DEFAULT 'participant',
   hide_name      TINYINT(1) NOT NULL DEFAULT 0,
   notify_daily   TINYINT(1) NOT NULL DEFAULT 0,
+  locale         CHAR(2) NOT NULL DEFAULT 'nb',   -- 'nb' or 'en'; language for e-mails
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_login_at  DATETIME NULL,
   anonymized_at  DATETIME NULL,

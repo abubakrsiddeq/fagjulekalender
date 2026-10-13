@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { requireCalendar } from "@/lib/admin";
 import { doorDate } from "@/lib/calendar";
 import { listQuestions } from "@/lib/questions";
 import { formatDayMonthShort } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 import { CalendarAdminNav } from "../../../_components/CalendarAdminNav";
 
-export const metadata = { title: "Forhåndsvisning" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.preview.title };
+}
 
 export default function PreviewGridPage(props: PageProps<"/admin/kalendere/[id]/forhandsvisning">) {
   return (
@@ -24,12 +28,14 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/fo
   await requireAdmin(`/admin/kalendere/${id}/forhandsvisning`);
   const cal = await requireCalendar(id);
   if (!cal) notFound();
+  const t = await getT();
+  const p = t.admin.preview;
   const questions = new Map((await listQuestions(cal.id)).map((q) => [q.door_number, q]));
   return (
     <>
       <CalendarAdminNav id={cal.id} name={cal.name} active="preview" />
-      <h1>Forhåndsvisning</h1>
-      <p className="muted">Alle luker kan åpnes her, uansett dato. Forhåndsvisning gir ingen poeng.</p>
+      <h1>{p.title}</h1>
+      <p className="muted">{p.intro}</p>
       <section className="panel">
         <ol className="doors">
           {Array.from({ length: cal.door_count }, (_, i) => i + 1).map((door) => {
@@ -45,10 +51,7 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/fo
                       {q.topic}
                     </span>
                     {!q.approved_at && <span className="dot" aria-hidden="true" />}
-                    <span className="sr-only">
-                      Luke {door}, {q.topic}
-                      {q.approved_at ? "" : ", ikke godkjent"}
-                    </span>
+                    <span className="sr-only">{p.srDoor(door, q.topic, !!q.approved_at)}</span>
                   </Link>
                 ) : (
                   <div className="door empty">
@@ -56,9 +59,9 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/fo
                       {door}
                     </span>
                     <span className="t" aria-hidden="true">
-                      Mangler
+                      {p.missing}
                     </span>
-                    <span className="sr-only">Luke {door}, mangler spørsmål</span>
+                    <span className="sr-only">{p.srMissing(door)}</span>
                   </div>
                 )}
               </li>
@@ -66,9 +69,11 @@ async function Content({ params }: { params: PageProps<"/admin/kalendere/[id]/fo
           })}
         </ol>
         <div className="legend">
-          <span>Gull prikk: ikke godkjent ennå</span>
-          <span>Stripete: mangler spørsmål</span>
-          <span>{formatDayMonthShort(doorDate(cal, 1))} – {formatDayMonthShort(doorDate(cal, cal.door_count))}</span>
+          <span>{p.legendNotApproved}</span>
+          <span>{p.legendMissing}</span>
+          <span>
+            {formatDayMonthShort(doorDate(cal, 1), t.lang)} – {formatDayMonthShort(doorDate(cal, cal.door_count), t.lang)}
+          </span>
         </div>
       </section>
     </>

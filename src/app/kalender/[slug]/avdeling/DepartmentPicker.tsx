@@ -3,7 +3,7 @@ import { getDepartment, listDepartments } from "@/lib/departments";
 import { getOrg } from "@/lib/org";
 import type { Calendar, User } from "@/lib/types";
 import { DepartmentForm } from "./DepartmentForm";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
 /**
  * Department choice, used inline on the calendar page (first visit) and on /avdeling (change).
@@ -24,6 +24,7 @@ export async function DepartmentPicker({
   inline: boolean;
 }) {
   const org = await getOrg();
+  const t = await getT();
   const locked = !!membership && !canChangeDepartment(cal, new Date()) && user.role !== "admin";
   if (locked) {
     return (

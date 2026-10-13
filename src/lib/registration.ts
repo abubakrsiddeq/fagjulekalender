@@ -5,7 +5,8 @@ import { canChangeDepartment, getMembership, isClosed, listCalendars, type Membe
 import { getDepartment, listDepartments, proposeDepartment, setMembership } from "./departments";
 import { invalidateScoreboard } from "./leaderboard";
 import { getOrg } from "./org";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
+import type { Dictionary } from "@/i18n";
 import type { Calendar, User } from "./types";
 
 // Registration: Kommune, Bydel, Avdeling eller seksjon, Ressursnummer, Ansvarlig.
@@ -19,7 +20,6 @@ export interface RegistrationInput {
   ansvarlig: string;
   departmentId: number | null;
   proposal: string;
-  hideName: boolean;
   notify: boolean;
 }
 
@@ -46,12 +46,11 @@ export function parseRegistration(fd: FormData): RegistrationInput {
     ansvarlig: squash(s("ansvarlig")),
     departmentId: Number.isInteger(dept) && dept > 0 ? dept : null,
     proposal: squash(s("proposal")),
-    hideName: fd.get("hide_name") === "on",
     notify: fd.get("notify_daily") === "on",
   };
 }
 
-function validate(input: RegistrationInput): string[] {
+function validate(input: RegistrationInput, t: Dictionary): string[] {
   const r = t.registration;
   const errors: string[] = [];
   const fields: [string, string, number, boolean][] = [
@@ -71,7 +70,8 @@ function validate(input: RegistrationInput): string[] {
 export type SaveRegistrationResult = { ok: true; lockedCalendars: string[] } | { ok: false; errors: string[] };
 
 export async function saveRegistration(user: User, input: RegistrationInput): Promise<SaveRegistrationResult> {
-  const errors = validate(input);
+  const t = await getT();
+  const errors = validate(input, t);
   const org = await getOrg();
 
   let departmentId: number | null = null;
@@ -93,7 +93,7 @@ export async function saveRegistration(user: User, input: RegistrationInput): Pr
   const now = new Date();
   await db.execute(
     `UPDATE users SET display_name = ?, kommune = ?, bydel = ?, ressursnummer = ?, ansvarlig = ?, department_id = ?,
-       hide_name = ?, notify_daily = ?, registered_at = COALESCE(registered_at, ?)
+       hide_name = 0, notify_daily = ?, registered_at = COALESCE(registered_at, ?)
      WHERE id = ? AND org_id = ?`,
     [
       input.displayName,
@@ -102,7 +102,6 @@ export async function saveRegistration(user: User, input: RegistrationInput): Pr
       input.ressursnummer,
       input.ansvarlig,
       departmentId,
-      input.hideName ? 1 : 0,
       input.notify ? 1 : 0,
       now,
       user.id,
@@ -167,7 +166,6 @@ export function registrationInitial(user: User) {
     ressursnummer: user.ressursnummer ?? "",
     ansvarlig: user.ansvarlig ?? "",
     departmentId: user.department_id,
-    hideName: !!user.hide_name,
     notify: !!user.notify_daily,
   };
 }

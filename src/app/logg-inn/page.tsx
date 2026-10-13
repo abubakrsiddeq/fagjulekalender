@@ -4,11 +4,15 @@ import type { Metadata } from "next";
 import { getCurrentUser, safeReturnPath } from "@/lib/auth";
 import { Loading } from "@/components/Loading";
 import { LoginForm } from "./LoginForm";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export const metadata: Metadata = { title: t.login.title };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.login.title };
+}
 
-export default function LoginPage(props: PageProps<"/logg-inn">) {
+export default async function LoginPage(props: PageProps<"/logg-inn">) {
+  const t = await getT();
   return (
     <div className="wrap narrow">
       <h1>{t.login.title}</h1>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFormAction } from "@/components/useFormAction";
 import { saveRegistrationAction, type RegistrationState } from "./actions";
-import { t } from "@/i18n";
+import { useT } from "@/i18n/client";
 
 export interface RegistrationInitial {
   displayName: string;
@@ -12,7 +12,6 @@ export interface RegistrationInitial {
   ressursnummer: string;
   ansvarlig: string;
   departmentId: number | null;
-  hideName: boolean;
   notify: boolean;
 }
 
@@ -33,6 +32,7 @@ export function RegistrationForm({
   kommuner: string[];
   bydeler: string[];
 }) {
+  const t = useT();
   const r = t.registration;
   const [state, onSubmit, pending] = useFormAction<RegistrationState>(saveRegistrationAction.bind(null, mode), {});
   const [proposing, setProposing] = useState(false);
@@ -107,10 +107,6 @@ export function RegistrationForm({
       <label className="check">
         <input type="checkbox" name="notify_daily" defaultChecked={initial.notify} />
         <span>{t.profile.notifyLabel}</span>
-      </label>
-      <label className="check">
-        <input type="checkbox" name="hide_name" defaultChecked={initial.hideName} />
-        <span>{t.profile.hideLabel}</span>
       </label>
 
       <div role="status" aria-live="polite">

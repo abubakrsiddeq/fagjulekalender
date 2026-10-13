@@ -5,6 +5,8 @@ import { logAudit } from "./audit";
 import { invalidateScoreboard } from "./leaderboard";
 import { parseCsv, toCsv } from "./csv";
 import { LETTERS } from "./answers";
+import { getT } from "@/i18n/server";
+import type { Dictionary } from "@/i18n";
 import type { Calendar, Question, QuestionOption, QuestionWithOptions } from "./types";
 
 const Q_COLS =
@@ -52,21 +54,22 @@ export interface QuestionInput {
   options: { id: number | null; text: string; isCorrect: boolean }[];
 }
 
-export function validateQuestion(input: QuestionInput, cal: Calendar): string[] {
+export function validateQuestion(input: QuestionInput, cal: Calendar, t: Dictionary): string[] {
+  const v = t.admin.validation;
   const errors: string[] = [];
-  if (!Number.isInteger(input.door) || input.door < 1 || input.door > cal.door_count) errors.push(`Luke må være mellom 1 og ${cal.door_count}.`);
-  if (!input.topic.trim()) errors.push("Tema mangler.");
-  if (input.topic.length > 60) errors.push("Tema kan ha maks 60 tegn.");
-  if (!input.text.trim()) errors.push("Spørsmålstekst mangler.");
-  if (!input.explanation.trim()) errors.push("Forklaring mangler.");
+  if (!Number.isInteger(input.door) || input.door < 1 || input.door > cal.door_count) errors.push(v.doorRange(cal.door_count));
+  if (!input.topic.trim()) errors.push(v.topicMissing);
+  if (input.topic.length > 60) errors.push(v.topicTooLong);
+  if (!input.text.trim()) errors.push(v.textMissing);
+  if (!input.explanation.trim()) errors.push(v.explanationMissing);
   const opts = input.options.filter((o) => o.text.trim());
-  if (opts.length < 2 || opts.length > 6) errors.push("Et spørsmål må ha 2–6 svaralternativer.");
-  if (opts.some((o) => o.text.length > 500)) errors.push("Et svaralternativ kan ha maks 500 tegn.");
+  if (opts.length < 2 || opts.length > 6) errors.push(v.optionCount);
+  if (opts.some((o) => o.text.length > 500)) errors.push(v.optionTooLong);
   const correct = opts.filter((o) => o.isCorrect).length;
-  if (correct !== 1) errors.push("Nøyaktig ett alternativ må være merket som riktig.");
-  if (input.imageUrl && !/^https?:\/\/\S+$/i.test(input.imageUrl)) errors.push("Bilde-URL må starte med https://");
-  for (const [label, v] of [["Revisjonsdato", input.sourceRevisionDate], ["Godkjent dato", input.approvedAt]] as const) {
-    if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) errors.push(`${label} må være en gyldig dato.`);
+  if (correct !== 1) errors.push(v.exactlyOneCorrect);
+  if (input.imageUrl && !/^https?:\/\/\S+$/i.test(input.imageUrl)) errors.push(v.imageUrl);
+  for (const [label, value] of [[v.revisionDate, input.sourceRevisionDate], [v.approvedAt, input.approvedAt]] as const) {
+    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) errors.push(v.invalidDate(label));
   }
   return errors;
 }
@@ -85,22 +88,24 @@ export async function saveQuestion(
   actorId: number,
   confirm: { confirmed: boolean; reason: string },
 ): Promise<SaveResult> {
-  const errors = validateQuestion(input, cal);
+  const t = await getT();
+  const v = t.admin.validation;
+  const errors = validateQuestion(input, cal, t);
   if (errors.length) return { ok: false, errors };
 
   const existing = existingDoor != null ? await getQuestion(cal.id, existingDoor) : null;
-  if (existingDoor != null && !existing) return { ok: false, errors: ["Spørsmålet finnes ikke lenger."] };
+  if (existingDoor != null && !existing) return { ok: false, errors: [v.questionGone] };
   const answers = existing ? (await answerCounts(cal.id)).get(existing.id) ?? 0 : 0;
 
   if (existing && existing.door_number !== input.door && answers > 0) {
-    return { ok: false, errors: ["Et spørsmål som allerede er besvart kan ikke flyttes til en annen luke."] };
+    return { ok: false, errors: [v.cannotMoveAnswered] };
   }
   const locked = (existing && isDoorLocked(cal, existing.door_number, answers > 0)) || isDoorLocked(cal, input.door, false);
   if (locked && (!confirm.confirmed || !confirm.reason.trim())) {
     return {
       ok: false,
       needsConfirm: true,
-      errors: ["Luken er åpnet. Endringer kan påvirke poeng som allerede er gitt. Kryss av for å bekrefte og skriv en begrunnelse."],
+      errors: [v.confirmOpened],
     };
   }
 
@@ -181,8 +186,8 @@ export async function saveQuestion(
       );
     });
   } catch (err) {
-    if (isDuplicateKey(err)) return { ok: false, errors: [`Luke ${input.door} har allerede et spørsmål.`] };
-    if (isForeignKeyViolation(err)) return { ok: false, errors: ["Et alternativ som noen har svart på kan ikke slettes. Endre teksten i stedet."] };
+    if (isDuplicateKey(err)) return { ok: false, errors: [v.doorTaken(input.door)] };
+    if (isForeignKeyViolation(err)) return { ok: false, errors: [v.optionInUse] };
     throw err;
   }
   invalidateScoreboard(cal.id);
@@ -193,7 +198,7 @@ export async function deleteQuestion(cal: Calendar, door: number, actorId: numbe
   const q = await getQuestion(cal.id, door);
   if (!q) return null;
   const n = (await answerCounts(cal.id)).get(q.id) ?? 0;
-  if (n > 0) return "Spørsmålet har svar og kan ikke slettes.";
+  if (n > 0) return (await getT()).admin.validation.hasAnswers;
   await transaction(async (tx) => {
     await tx.execute("DELETE FROM questions WHERE id = ?", [q.id]);
     await logAudit({ userId: actorId, action: "question.delete", entity: "question", entityId: q.id, before: snapshot(q) }, tx);
@@ -293,15 +298,17 @@ export interface ImportReport {
 }
 
 export async function importQuestionsCsv(cal: Calendar, text: string, actorId: number, overwriteOpened: boolean): Promise<ImportReport> {
+  const t = await getT();
+  const v = t.admin.validation;
   const report: ImportReport = { imported: [], skipped: [], errors: [] };
   const rows = parseCsv(text);
   if (rows.length < 2) {
-    report.errors.push("Filen har ingen rader med spørsmål.");
+    report.errors.push(v.emptyFile);
     return report;
   }
   const header = rows[0].map(normalizeHeader);
   for (const required of ["door", "topic", "question", "option_a", "option_b", "correct", "explanation"] as const) {
-    if (!header.includes(required)) report.errors.push(`Kolonnen «${required}» mangler i første rad.`);
+    if (!header.includes(required)) report.errors.push(v.missingColumn(required));
   }
   if (report.errors.length) return report;
 
@@ -317,9 +324,9 @@ export async function importQuestionsCsv(cal: Calendar, text: string, actorId: n
       return i >= 0 ? (row[i] ?? "").trim() : "";
     };
     const door = Number(get("door"));
-    const label = Number.isInteger(door) && door > 0 ? door : `rad ${lineNo}`;
+    const label = Number.isInteger(door) && door > 0 ? door : v.rowLabel(lineNo);
     if (seen.has(door)) {
-      report.skipped.push({ door: label, reason: "Luken står flere ganger i filen." });
+      report.skipped.push({ door: label, reason: v.duplicateDoor });
       continue;
     }
     seen.add(door);
@@ -333,7 +340,7 @@ export async function importQuestionsCsv(cal: Calendar, text: string, actorId: n
       .map((t, i) => ({ id: null, text: t, isCorrect: i === correctIndex }))
       .filter((o) => o.text);
     if (correctIndex >= 0 && !optionTexts[correctIndex]) {
-      report.skipped.push({ door: label, reason: `Riktig svar «${correctRaw}» peker på et tomt alternativ.` });
+      report.skipped.push({ door: label, reason: v.emptyCorrect(correctRaw) });
       continue;
     }
     const input: QuestionInput = {
@@ -349,7 +356,7 @@ export async function importQuestionsCsv(cal: Calendar, text: string, actorId: n
       approvedAt: approvedAt === "invalid" ? "x" : approvedAt,
       options,
     };
-    const errors = validateQuestion(input, cal);
+    const errors = validateQuestion(input, cal, t);
     if (errors.length) {
       report.skipped.push({ door: label, reason: errors.join(" ") });
       continue;
@@ -358,11 +365,11 @@ export async function importQuestionsCsv(cal: Calendar, text: string, actorId: n
     const current = byDoor.get(door);
     if (current) {
       if ((counts.get(current.id) ?? 0) > 0) {
-        report.skipped.push({ door, reason: "Luken har allerede svar. Bruk redigering i stedet." });
+        report.skipped.push({ door, reason: v.doorHasAnswers });
         continue;
       }
       if (isDoorLocked(cal, door, false) && !overwriteOpened) {
-        report.skipped.push({ door, reason: "Luken er åpnet. Kryss av for å overskrive åpne luker." });
+        report.skipped.push({ door, reason: v.doorOpened });
         continue;
       }
     }

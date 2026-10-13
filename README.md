@@ -7,7 +7,7 @@ department-vs-department leaderboard. Built from the requirements document
 - **App:** Next.js 16 (App Router, TypeScript), server-rendered, no client-side answer key
 - **Database:** MySQL 8+ or MariaDB 10.4+ (Hostinger MySQL, managed in phpMyAdmin)
 - **Sign-in:** e-mail + 6-digit one-time code (no passwords), sent over SMTP
-- **UI language:** Norwegian Bokmål for participants (texts in `src/i18n/nb.ts`), Norwegian admin
+- **Languages:** Norwegian Bokmål (default) and English, switchable in the header; all texts in `src/i18n/nb.ts` and `src/i18n/en.ts`
 
 ---
 
@@ -47,9 +47,13 @@ date to a few days ago and publish it.
 `schema.sql` starts with `DROP TABLE IF EXISTS`, so **never re-import it on a live database** —
 it deletes all data. Later changes come as migrations in `database/migrations/`.
 
-**Already imported the first `schema.sql`?** Run `database/migrations/001-registrering.sql` once:
-phpMyAdmin → select the database → **SQL** tab → paste the file → *Go*. It adds the registration
-fields and opens sign-up to every e-mail address.
+**Already imported the first `schema.sql`?** Run the migrations once each, in order:
+phpMyAdmin → select the database → **SQL** tab → paste the file → *Go*.
+
+1. `database/migrations/001-registrering.sql`: registration fields, and opens sign-up to every e-mail address.
+2. `database/migrations/002-language.sql`: each user's language (for the daily e-mail).
+
+Run them **before** deploying the new code; the app reads these columns on every page.
 
 ### 2.2 The app (Node.js web app)
 
@@ -140,6 +144,7 @@ After the last door: export results, then **Arkiver**.
 | FR-9.1 daily e-mail | `src/lib/cron.ts`, `/api/cron` |
 | Department lead view + export | `/kalender/[slug]/min-avdeling` |
 | Source revision reminder | Admin → Spørsmål → Kilderutiner |
+| Language switcher, Norwegian/English (all participant and admin pages, error messages, e-mails) | Header button; `src/i18n/` |
 
 **Not built in v1:** FR-1.2 Entra ID SSO (Should; one of the open questions), FR-9.2 weekly
 summary to leads (Could), `.xlsx` upload (import and export are CSV that Excel opens and
@@ -191,5 +196,12 @@ from a laptop.
   client router caches a server redirect and would replay it after the participant joined.
 - The in-memory rate limiter (`src/lib/ratelimit.ts`) and leaderboard cache (15 s) assume one
   Node process. Sign-in limits are also enforced in the database.
+- **Texts and languages.** Every visible text lives in `src/i18n/nb.ts` and `src/i18n/en.ts`
+  (same keys; TypeScript fails the build if English misses one). Server code uses
+  `const t = await getT()` (`src/i18n/server.ts`), Client Components use `const t = useT()`
+  (`src/i18n/client.tsx`). The choice is stored in the `fjk_lang` cookie and on the user
+  (`users.locale`), so the daily e-mail goes out in each participant's language. Question texts,
+  department names and CSV column names are data and are not translated. To add Nynorsk: copy
+  `en.ts` to `nn.ts`, translate, and register it in `src/i18n/index.ts`.
 - Without JavaScript, the sign-in form submits but doesn't advance to the code step. Every
   supported browser runs JavaScript, so this only matters for unusual setups.

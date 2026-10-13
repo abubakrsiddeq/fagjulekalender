@@ -1,10 +1,10 @@
 import type { DepartmentScore, TopEntry } from "@/lib/leaderboard";
 import { ScrollTable } from "./ScrollTable";
-import { t, locale } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-const fmt = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 1 });
-
-export function DepartmentTable({ departments, mine }: { departments: DepartmentScore[]; mine?: number | null }) {
+export async function DepartmentTable({ departments, mine }: { departments: DepartmentScore[]; mine?: number | null }) {
+  const t = await getT();
+  const fmt = (n: number) => n.toLocaleString(t.intl, { maximumFractionDigits: 1 });
   if (!departments.length) return <p className="empty">{t.results.empty}</p>;
   return (
     <ScrollTable label={t.results.title}>
@@ -48,7 +48,8 @@ export function DepartmentTable({ departments, mine }: { departments: Department
   );
 }
 
-export function TopTable({ entries, me }: { entries: TopEntry[]; me: number }) {
+export async function TopTable({ entries, me }: { entries: TopEntry[]; me: number }) {
+  const t = await getT();
   if (!entries.length) return <p className="empty">{t.results.empty}</p>;
   return (
     <ScrollTable label={t.results.topTitle}>
@@ -68,7 +69,7 @@ export function TopTable({ entries, me }: { entries: TopEntry[]; me: number }) {
           {entries.map((e) => (
             <tr key={e.userId} className={e.userId === me ? "mine" : undefined}>
               <td className="rank">{e.rank}</td>
-              <td>{e.userId === me ? `${e.name} (${t.results.you.toLowerCase()})` : e.name}</td>
+              <td>{e.userId === me ? `${e.name} (${t.results.you})` : e.name}</td>
               <td>{e.departmentName}</td>
               <td className="num">{e.points}</td>
             </tr>

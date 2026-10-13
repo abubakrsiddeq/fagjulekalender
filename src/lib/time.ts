@@ -101,18 +101,21 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-const MONTHS_NB = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"];
+const MONTHS = {
+  nb: ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"],
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+};
 
-/** "1. desember" */
-export function formatDayMonth(ymd: string): string {
+/** "1. desember" / "1 December" */
+export function formatDayMonth(ymd: string, lang: string = "nb"): string {
   const [, m, d] = ymd.split("-").map(Number);
-  return `${d}. ${MONTHS_NB[m - 1]}`;
+  return lang === "en" ? `${d} ${MONTHS.en[m - 1]}` : `${d}. ${MONTHS.nb[m - 1]}`;
 }
 
-/** "1. des" */
-export function formatDayMonthShort(ymd: string): string {
+/** "1. des" / "1 Dec" */
+export function formatDayMonthShort(ymd: string, lang: string = "nb"): string {
   const [, m, d] = ymd.split("-").map(Number);
-  return `${d}. ${MONTHS_NB[m - 1].slice(0, 3)}`;
+  return lang === "en" ? `${d} ${MONTHS.en[m - 1].slice(0, 3)}` : `${d}. ${MONTHS.nb[m - 1].slice(0, 3)}`;
 }
 
 /** "12.12.2026 07:31" in the given zone. */

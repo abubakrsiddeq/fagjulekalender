@@ -1,23 +1,25 @@
 import Link from "next/link";
+import { getT } from "@/i18n/server";
 
 const ITEMS = [
-  { key: "overview", path: "", label: "Oversikt" },
-  { key: "questions", path: "/sporsmal", label: "Spørsmål" },
-  { key: "preview", path: "/forhandsvisning", label: "Forhåndsvisning" },
-  { key: "participants", path: "/deltakere", label: "Deltakere" },
-  { key: "report", path: "/rapport", label: "Rapport og eksport" },
+  { key: "overview", path: "" },
+  { key: "questions", path: "/sporsmal" },
+  { key: "preview", path: "/forhandsvisning" },
+  { key: "participants", path: "/deltakere" },
+  { key: "report", path: "/rapport" },
 ] as const;
 
-export function CalendarAdminNav({ id, name, active }: { id: number; name: string; active: (typeof ITEMS)[number]["key"] }) {
+export async function CalendarAdminNav({ id, name, active }: { id: number; name: string; active: (typeof ITEMS)[number]["key"] }) {
+  const a = (await getT()).admin;
   return (
     <>
       <p className="crumbs">
-        <Link href="/admin">Kalendere</Link> / {name}
+        <Link href="/admin">{a.calendars.title}</Link> / {name}
       </p>
-      <nav className="tabs" aria-label="Kalender">
+      <nav className="tabs" aria-label={a.calNav.label}>
         {ITEMS.map((i) => (
           <Link key={i.key} href={`/admin/kalendere/${id}${i.path}`} aria-current={i.key === active ? "page" : undefined}>
-            {i.label}
+            {a.calNav[i.key]}
           </Link>
         ))}
       </nav>

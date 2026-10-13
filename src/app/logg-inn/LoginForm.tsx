@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "./actions";
-import { t } from "@/i18n";
+import { useT } from "@/i18n/client";
 
 export function LoginForm({ next }: { next: string }) {
+  const t = useT();
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, { step: "email", email: "", next });
 
   if (state.step === "email") {

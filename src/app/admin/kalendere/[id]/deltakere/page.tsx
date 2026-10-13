@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { requireCalendar } from "@/lib/admin";
 import { getScoreboard } from "@/lib/leaderboard";
 import { formatDateTime } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 import { CalendarAdminNav } from "../../../_components/CalendarAdminNav";
 
-export const metadata = { title: "Deltakere" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.participants.title };
+}
 
 export default function ParticipantsPage(props: PageProps<"/admin/kalendere/[id]/deltakere">) {
   return (
@@ -29,6 +33,7 @@ async function Content({
   await requireAdmin(`/admin/kalendere/${id}/deltakere`);
   const cal = await requireCalendar(id);
   if (!cal) notFound();
+  const a = (await getT()).admin;
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q.trim().toLocaleLowerCase("nb") : "";
   const board = await getScoreboard(cal, { fresh: true });
@@ -38,43 +43,43 @@ async function Content({
         !q ||
         [p.displayName, p.email, p.departmentName, p.kommune, p.bydel, p.ressursnummer, p.ansvarlig].some((v) => v?.toLocaleLowerCase("nb").includes(q)),
     )
-    .sort((a, b) => a.departmentName.localeCompare(b.departmentName, "nb") || a.displayName.localeCompare(b.displayName, "nb"));
+    .sort((x, y) => x.departmentName.localeCompare(y.departmentName, "nb") || x.displayName.localeCompare(y.displayName, "nb"));
 
   return (
     <>
       <CalendarAdminNav id={cal.id} name={cal.name} active="participants" />
       <div className="panel-head">
-        <h1>Deltakere</h1>
-        <span className="small">{board.participants.length} påmeldt</span>
+        <h1>{a.participants.title}</h1>
+        <span className="small">{a.participants.count(board.participants.length)}</span>
       </div>
       <form className="inline-form" role="search">
         <label htmlFor="q" className="sr-only">
-          Søk etter navn, e-post, avdeling, kommune eller ressursnummer
+          {a.participants.searchLabel}
         </label>
-        <input id="q" name="q" type="search" defaultValue={q} placeholder="Søk navn, e-post, avdeling, kommune, ressursnr." style={{ minWidth: 300 }} />
+        <input id="q" name="q" type="search" defaultValue={q} placeholder={a.participants.searchPlaceholder} style={{ minWidth: 300 }} />
         <button className="btn ghost small" type="submit">
-          Søk
+          {a.c.search}
         </button>
       </form>
       <section className="panel tbl">
         {rows.length === 0 ? (
-          <p className="empty">Ingen treff.</p>
+          <p className="empty">{a.c.noHits}</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th scope="col">Navn</th>
-                <th scope="col">E-post</th>
-                <th scope="col">Kommune / bydel</th>
-                <th scope="col">Ressursnr.</th>
-                <th scope="col">Avdeling</th>
+                <th scope="col">{a.c.name}</th>
+                <th scope="col">{a.c.email}</th>
+                <th scope="col">{a.c.kommuneBydel}</th>
+                <th scope="col">{a.c.ressursnr}</th>
+                <th scope="col">{a.c.department}</th>
                 <th scope="col" className="num">
-                  Besvart
+                  {a.c.answered}
                 </th>
                 <th scope="col" className="num">
-                  Poeng
+                  {a.c.points}
                 </th>
-                <th scope="col">Sist svart</th>
+                <th scope="col">{a.c.lastAnswer}</th>
               </tr>
             </thead>
             <tbody>
@@ -88,7 +93,9 @@ async function Content({
                   <td className="small">{p.ressursnummer ?? "–"}</td>
                   <td>
                     {p.departmentName}
-                    {p.departmentStatus !== "active" && <span className="badge warn"> {p.departmentStatus === "pending" ? "venter" : "arkivert"}</span>}
+                    {p.departmentStatus !== "active" && (
+                      <span className="badge warn"> {p.departmentStatus === "pending" ? a.deptStatus.pendingShort : a.deptStatus.archivedShort}</span>
+                    )}
                   </td>
                   <td className="num">{p.answered}</td>
                   <td className="num">{p.points}</td>

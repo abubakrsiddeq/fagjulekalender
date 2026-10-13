@@ -4,9 +4,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { listCalendars } from "@/lib/calendar";
 import { formatDayMonth } from "@/lib/time";
 import { Loading } from "@/components/Loading";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
-export default function Home(props: PageProps<"/">) {
+export default async function Home(props: PageProps<"/">) {
+  const t = await getT();
   return (
     <div className="wrap">
       <header className="page-head">
@@ -31,6 +32,7 @@ export default function Home(props: PageProps<"/">) {
 
 async function HomeContent({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   const user = await getCurrentUser();
+  const t = await getT();
   const sp = await searchParams;
   const calendars = await listCalendars(["published"]);
   const noAccess = sp["ingen-tilgang"] === "1";
@@ -58,7 +60,7 @@ async function HomeContent({ searchParams }: { searchParams: PageProps<"/">["sea
               <div className="panel-head">
                 <h2>{c.name}</h2>
                 <span className="small">
-                  {formatDayMonth(c.start_date)} {c.year}
+                  {formatDayMonth(c.start_date, t.lang)} {c.year}
                 </span>
               </div>
               <div className="row">

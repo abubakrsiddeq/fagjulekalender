@@ -2,6 +2,7 @@ import "server-only";
 import { db, isDuplicateKey, transaction } from "./db";
 import { env } from "./env";
 import { logAudit } from "./audit";
+import { getT } from "@/i18n/server";
 import type { Department } from "./types";
 
 const COLS = "id, org_id, name, status, proposed_by, merged_into_id, created_at";
@@ -31,11 +32,12 @@ export async function findSimilarDepartment(name: string): Promise<Department | 
 
 /** FR-2.3: a participant proposes a department; it stays pending until an admin approves it. */
 export async function proposeDepartment(name: string, userId: number): Promise<{ department: Department; existed: boolean } | { error: string }> {
+  const t = await getT();
   const clean = cleanName(name);
-  if (clean.length < 2) return { error: "Skriv inn navnet på avdelingen." };
+  if (clean.length < 2) return { error: t.department.nameTooShort };
   const similar = await findSimilarDepartment(clean);
   if (similar) {
-    if (similar.status === "archived") return { error: `Avdelingen «${similar.name}» er arkivert. Kontakt administrator.` };
+    if (similar.status === "archived") return { error: t.department.archivedExists(similar.name) };
     return { department: similar, existed: true };
   }
   try {

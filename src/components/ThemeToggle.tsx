@@ -1,6 +1,9 @@
 "use client";
 
-export function ThemeToggle({ label }: { label: string }) {
+import { useT } from "@/i18n/client";
+
+export function ThemeToggle() {
+  const label = useT().nav.themeToggle;
   function toggle() {
     const root = document.documentElement;
     const current = root.getAttribute("data-theme") ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");

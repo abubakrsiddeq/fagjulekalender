@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ResultBox, StaticOptions, type ViewOption, type ViewResult } from "@/components/QuestionView";
-import { t } from "@/i18n";
+import { useT } from "@/i18n/client";
 
 export function AnswerForm({
   slug,
@@ -18,6 +18,7 @@ export function AnswerForm({
   initialResult: ViewResult | null;
 }) {
   const router = useRouter();
+  const t = useT();
   const [picked, setPicked] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);

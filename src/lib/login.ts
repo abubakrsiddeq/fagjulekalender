@@ -5,7 +5,7 @@ import { env } from "./env";
 import { sendMail, escapeHtml } from "./mail";
 import { allowedDomains, getOrg } from "./org";
 import { createSession, USER_COLUMNS } from "./auth";
-import { t } from "@/i18n";
+import { getLocale, getT } from "@/i18n/server";
 import type { User } from "./types";
 
 const CODE_TTL_MIN = 10;
@@ -49,6 +49,7 @@ export async function isEmailAllowed(email: string): Promise<boolean> {
 export type LoginResult = { ok: true } | { ok: false; error: string };
 
 export async function requestLoginCode(email: string, ip: string): Promise<LoginResult> {
+  const t = await getT();
   if (!isValidEmail(email)) return { ok: false, error: t.login.invalidEmail };
   if (!(await isEmailAllowed(email))) return { ok: false, error: t.login.notAllowed };
 
@@ -80,6 +81,7 @@ export async function requestLoginCode(email: string, ip: string): Promise<Login
 }
 
 export async function verifyLoginCode(email: string, codeRaw: string): Promise<{ ok: true; user: User } | { ok: false; error: string }> {
+  const t = await getT();
   const code = codeRaw.replace(/\s+/g, "");
   if (!/^\d{6}$/.test(code)) return { ok: false, error: t.login.wrongCode };
 
@@ -139,6 +141,9 @@ async function findOrCreateUser(email: string): Promise<User> {
     await db.execute("UPDATE users SET role = 'admin' WHERE id = ?", [user.id]);
     user.role = "admin";
   }
-  await db.execute("UPDATE users SET last_login_at = ? WHERE id = ?", [new Date(), user.id]);
+  // Remember the language chosen on the sign-in page, for e-mails (daily reminder).
+  const locale = await getLocale();
+  await db.execute("UPDATE users SET last_login_at = ?, locale = ? WHERE id = ?", [new Date(), locale, user.id]);
+  user.locale = locale;
   return user;
 }

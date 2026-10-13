@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useFormAction } from "@/components/useFormAction";
 import { joinDepartment, type JoinState } from "./actions";
-import { t } from "@/i18n";
+import { useT } from "@/i18n/client";
 
 export function DepartmentForm({
   slug,
@@ -22,6 +22,7 @@ export function DepartmentForm({
   allowProposals: boolean;
   inline: boolean;
 }) {
+  const t = useT();
   const [state, onSubmit, pending] = useFormAction<JoinState>(joinDepartment.bind(null, slug), {});
   const [proposing, setProposing] = useState(false);
 

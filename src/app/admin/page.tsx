@@ -1,18 +1,18 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { listCalendars } from "@/lib/calendar";
 import { calendarStats } from "@/lib/admin";
 import { formatDate } from "@/lib/time";
 import { Loading } from "@/components/Loading";
+import { getT } from "@/i18n/server";
 
-export const metadata = { title: "Kalendere" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT()).admin.calendars.title };
+}
 
-const STATUS: Record<string, { label: string; cls: string }> = {
-  draft: { label: "Utkast", cls: "warn" },
-  published: { label: "Publisert", cls: "ok" },
-  archived: { label: "Arkivert", cls: "" },
-};
+const STATUS_CLASS: Record<string, string> = { draft: "warn", published: "ok", archived: "" };
 
 export default function AdminHome() {
   return (
@@ -24,37 +24,39 @@ export default function AdminHome() {
 
 async function AdminHomeContent() {
   await requireAdmin("/admin");
+  const t = await getT();
+  const a = t.admin;
   const calendars = await listCalendars();
   const stats = await calendarStats(calendars.map((c) => c.id));
   return (
     <>
       <div className="panel-head">
-        <h1>Kalendere</h1>
+        <h1>{a.calendars.title}</h1>
         <Link className="btn" href="/admin/kalendere/ny">
-          Ny kalender
+          {a.calendars.new}
         </Link>
       </div>
       {calendars.length === 0 ? (
-        <p className="note">Ingen kalendere ennå. Opprett en, eller importer database/seed.sql.</p>
+        <p className="note">{a.calendars.empty}</p>
       ) : (
         <div className="panel tbl">
           <table>
             <thead>
               <tr>
-                <th scope="col">Navn</th>
-                <th scope="col">Status</th>
-                <th scope="col">Start</th>
+                <th scope="col">{a.c.name}</th>
+                <th scope="col">{a.c.status}</th>
+                <th scope="col">{a.calendars.start}</th>
                 <th scope="col" className="num">
-                  Spørsmål
+                  {a.calendars.questions}
                 </th>
                 <th scope="col" className="num">
-                  Godkjent
+                  {a.calendars.approved}
                 </th>
                 <th scope="col" className="num">
-                  Deltakere
+                  {a.c.participants}
                 </th>
                 <th scope="col" className="num">
-                  Svar
+                  {a.c.answers}
                 </th>
               </tr>
             </thead>
@@ -68,7 +70,7 @@ async function AdminHomeContent() {
                       <div className="small">/kalender/{c.slug}</div>
                     </td>
                     <td>
-                      <span className={`badge ${STATUS[c.status].cls}`}>{STATUS[c.status].label}</span>
+                      <span className={`badge ${STATUS_CLASS[c.status]}`}>{a.status[c.status]}</span>
                     </td>
                     <td>{formatDate(c.start_date)}</td>
                     <td className="num">

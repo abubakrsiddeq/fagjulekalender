@@ -8,7 +8,7 @@ import { formatDayMonth } from "@/lib/time";
 import { Loading } from "@/components/Loading";
 import { StaticOptions } from "@/components/QuestionView";
 import { AnswerForm } from "./AnswerForm";
-import { t } from "@/i18n";
+import { getT } from "@/i18n/server";
 
 export default function DoorPage(props: PageProps<"/kalender/[slug]/luke/[door]">) {
   return (
@@ -24,10 +24,11 @@ async function DoorContent({ params }: { params: PageProps<"/kalender/[slug]/luk
   const { slug, door: doorParam } = await params;
   const door = Number(doorParam);
   const { user, cal, membership } = await loadCalendarPage(slug, `/kalender/${slug}/luke/${doorParam}`);
+  const t = await getT();
   if (!Number.isInteger(door) || door < 1 || door > cal.door_count) notFound();
 
   const now = new Date();
-  const date = formatDayMonth(doorDate(cal, door));
+  const date = formatDayMonth(doorDate(cal, door), t.lang);
   const back = (
     <p className="crumbs">
       <Link href={`/kalender/${slug}`}>← {t.question.back}</Link>
