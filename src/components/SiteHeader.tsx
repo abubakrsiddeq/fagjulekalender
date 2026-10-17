@@ -7,6 +7,8 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
+/** The Bokonsept AS symbol; an organization logo_url (https) replaces it. */
+const SYMBOL = "/brand/symbol.png";
 
 /** Shown while the page streams in; no text that depends on the visitor. */
 export function SiteHeaderShell() {
@@ -14,6 +16,8 @@ export function SiteHeaderShell() {
     <header className="site-header">
       <div className="inner">
         <Link href="/" className="brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={SYMBOL} alt="" width={36} height={36} />
           <b>Fagjulekalender</b>
         </Link>
       </div>
@@ -27,7 +31,7 @@ export async function SiteHeader() {
   const user = await getCurrentUser();
   const [org, t] = await Promise.all([getOrg(), getT()]);
   const brand = org.brand_color && HEX.test(org.brand_color) ? org.brand_color : null;
-  const logo = org.logo_url && /^https:\/\//.test(org.logo_url) ? org.logo_url : null;
+  const logo = org.logo_url && /^https:\/\//.test(org.logo_url) ? org.logo_url : SYMBOL;
 
   return (
     <header className="site-header">
@@ -35,7 +39,7 @@ export async function SiteHeader() {
       <div className="inner">
         <Link href="/" className="brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {logo && <img src={logo} alt="" />}
+          <img src={logo} alt="" width={36} height={36} />
           <span style={{ display: "grid" }}>
             <b>{t.appName}</b>
             <span>{org.name}</span>

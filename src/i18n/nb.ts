@@ -22,6 +22,11 @@ export const nb = {
   meta: {
     description: "Daglig læringsøyeblikk fra 1. til 24. desember, med avdelingskonkurranse.",
   },
+  footer: {
+    label: "Om tjenesten",
+    poweredBy: "Levert av",
+    partner: "Utviklingspartner",
+  },
   landing: {
     eyebrow: "Advent · Helsetjenester i hjemmet",
     title: "Fagjulekalender",

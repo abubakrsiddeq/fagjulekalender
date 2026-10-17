@@ -23,6 +23,11 @@ export const en: Dictionary = {
   meta: {
     description: "A daily learning moment from 1 to 24 December, with a competition between departments.",
   },
+  footer: {
+    label: "About the service",
+    poweredBy: "Powered by",
+    partner: "Development partner",
+  },
   landing: {
     eyebrow: "Advent · Home care services",
     title: "Fagjulekalender",

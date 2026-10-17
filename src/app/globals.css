@@ -184,6 +184,41 @@ p {
   min-width: 0;
 }
 .brand img {
+  height: 36px;
+  width: auto;
+}
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  margin-top: 48px;
+}
+.site-footer .inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 32px;
+  flex-wrap: wrap;
+}
+.site-footer .credit {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+/* The logos are drawn for a light background, so they sit on white in dark mode too. */
+.site-footer .logo-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.site-footer .logo-chip img {
   height: 32px;
   width: auto;
 }

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Figtree, Young_Serif } from "next/font/google";
 import { InlineScript } from "@/components/InlineScript";
 import { LocaleRoot } from "@/components/LocaleRoot";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader, SiteHeaderShell } from "@/components/SiteHeader";
 import { getT } from "@/i18n/server";
 import "./globals.css";
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <SiteHeader />
             </Suspense>
             <main id="main">{children}</main>
+            <SiteFooter />
           </LocaleRoot>
         </Suspense>
       </body>
