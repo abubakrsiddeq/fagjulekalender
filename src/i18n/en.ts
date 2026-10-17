@@ -27,6 +27,8 @@ export const en: Dictionary = {
     label: "About the service",
     poweredBy: "Powered by",
     partner: "Development partner",
+    tagline: "A small learning moment every day of Advent.",
+    rights: "All rights reserved.",
   },
   landing: {
     eyebrow: "Advent · Home care services",

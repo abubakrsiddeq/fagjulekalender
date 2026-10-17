@@ -335,44 +335,191 @@ p {
   cursor: progress;
 }
 
-/* ---------- Footer ---------- */
+/* ---------- Footer ----------
+   Always a deep "aurora" band (in light and dark theme): glowing gradient edge,
+   faint grid texture, frosted-glass partner cards. */
 .site-footer {
-  border-top: 1px solid var(--line);
-  background: var(--surface);
+  --ft-bg: #071114;
+  --ft-fg: #e6f2f1;
+  --ft-muted: #8fa9ad;
+  --ft-teal: #4fd1c1;
+  --ft-sage: #8fd19e;
+  --ft-berry: #f0718f;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: 56px;
+  color: var(--ft-fg);
+  background:
+    radial-gradient(520px 260px at 12% 0%, rgb(79 209 193 / 0.22), transparent 70%),
+    radial-gradient(480px 240px at 88% 100%, rgb(240 113 143 / 0.16), transparent 70%),
+    radial-gradient(700px 300px at 50% 120%, rgb(143 209 158 / 0.12), transparent 70%),
+    var(--ft-bg);
+}
+/* Animated gradient edge */
+.site-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ft-teal), var(--ft-sage), var(--ft-berry), var(--ft-teal), transparent);
+  background-size: 200% 100%;
+  box-shadow: 0 0 18px 1px rgb(79 209 193 / 0.55);
+  animation: ft-flow 8s linear infinite;
+}
+/* Grid texture, fading out towards the bottom */
+.site-footer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, #000, transparent 85%);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+@keyframes ft-flow {
+  to {
+    background-position: -200% 0;
+  }
 }
 .site-footer .inner {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 40px 20px 28px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px 40px;
+  justify-content: space-between;
+  gap: 28px 40px;
+  flex-wrap: wrap;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.footer-symbol {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2), 0 0 28px rgb(79 209 193 / 0.45);
+}
+.footer-symbol img {
+  width: 44px;
+  height: 44px;
+}
+.footer-brand b {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #ffffff, var(--ft-teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.footer-brand span span {
+  font-size: 0.86rem;
+  color: var(--ft-muted);
+}
+.footer-credits {
+  display: flex;
+  gap: 14px;
   flex-wrap: wrap;
 }
 .site-footer .credit {
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-  color: var(--muted);
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.02));
+  border: 1px solid rgb(255 255 255 / 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
-/* The logos are drawn for a light background, so they sit on white in dark mode too. */
+.site-footer .credit:hover {
+  transform: translateY(-3px);
+  border-color: rgb(79 209 193 / 0.55);
+  box-shadow: 0 12px 30px -12px rgb(79 209 193 / 0.6);
+}
+.credit-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--ft-teal);
+}
+/* The logos are drawn for a light background, so they sit on white. */
 .site-footer .logo-chip {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: center;
+  height: 50px;
+  padding: 6px 12px;
   border-radius: 10px;
   background: #ffffff;
-  border: 1px solid var(--line);
 }
 .site-footer .logo-chip img {
-  height: 30px;
+  height: 34px;
   width: auto;
+}
+.footer-base {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 20px 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--ft-muted);
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+.footer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+.footer-status .pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ft-sage);
+  box-shadow: 0 0 0 0 rgb(143 209 158 / 0.7);
+  animation: ft-pulse 2s ease-out infinite;
+}
+@keyframes ft-pulse {
+  to {
+    box-shadow: 0 0 0 10px rgb(143 209 158 / 0);
+  }
+}
+.site-footer a {
+  color: var(--ft-teal);
+}
+.site-footer :focus-visible {
+  outline-color: var(--ft-teal);
+}
+@media (max-width: 600px) {
+  .site-footer .inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footer-credits,
+  .site-footer .credit {
+    width: 100%;
+  }
 }
 
 /* ---------- Page heads & hero ---------- */

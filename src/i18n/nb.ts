@@ -26,6 +26,8 @@ export const nb = {
     label: "Om tjenesten",
     poweredBy: "Levert av",
     partner: "Utviklingspartner",
+    tagline: "Et lite læringsøyeblikk hver dag i advent.",
+    rights: "Alle rettigheter forbeholdt.",
   },
   landing: {
     eyebrow: "Advent · Helsetjenester i hjemmet",
