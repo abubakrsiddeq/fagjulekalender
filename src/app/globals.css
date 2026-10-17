@@ -620,13 +620,13 @@ a.door.ready:hover {
 }
 .door.correct,
 .door.wrong,
-.door.closed {
+.door.missed {
   background: var(--door-open);
   color: var(--fg);
 }
 .door.correct .n,
 .door.wrong .n,
-.door.closed .n {
+.door.missed .n {
   color: var(--muted);
 }
 .door.correct {
@@ -643,7 +643,7 @@ a.door.ready:hover {
   color: var(--bad);
   font-weight: 700;
 }
-.door.closed .t {
+.door.missed .t {
   color: var(--muted);
 }
 .door.today {

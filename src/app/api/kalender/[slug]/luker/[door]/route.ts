@@ -22,7 +22,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/kalender/[s
   const block = answerBlock(cal, door, now);
   return json({
     door,
-    state: result ? (result.isCorrect ? "correct" : "wrong") : block ? "closed" : "ready",
+    state: result ? (result.isCorrect ? "correct" : "wrong") : block ? "missed" : "ready",
     question,
     result,
   });

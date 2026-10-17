@@ -206,7 +206,7 @@ function Door({ slug, info, t }: { slug: string; info: DoorInfo; t: Dictionary }
     case "wrong":
       label = t.calendar.wrongShort;
       break;
-    case "closed":
+    case "missed":
       label = t.calendar.missedShort;
       break;
     default:

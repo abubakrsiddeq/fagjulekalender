@@ -36,10 +36,12 @@ export function doorOpensAt(cal: Calendar, door: number): Date {
   return zonedTimeToUtc(doorDate(cal, door), "00:00", cal.timezone);
 }
 
-/** Last moment (exclusive) an answer to door n is accepted. */
+/**
+ * Last moment (exclusive) an answer to door n is accepted: the end of the door's
+ * own day. Once that day has passed the door is missed and scores 0.
+ */
 export function doorAnswerableUntil(cal: Calendar, door: number): Date {
   const closes = new Date(cal.closes_at.getTime() + 1000); // closes_at is inclusive (…23:59:59)
-  if (cal.late_answers_allowed) return closes;
   const endOfDay = doorOpensAt(cal, door + 1);
   return endOfDay < closes ? endOfDay : closes;
 }
@@ -95,7 +97,7 @@ export async function getMembership(calendarId: number, userId: number): Promise
   );
 }
 
-export type DoorState = "locked" | "ready" | "correct" | "wrong" | "closed" | "empty";
+export type DoorState = "locked" | "ready" | "correct" | "wrong" | "missed" | "empty";
 
 export interface DoorInfo {
   door: number;
@@ -149,7 +151,7 @@ export async function getUserProgress(cal: Calendar, userId: number | null, now:
     } else if (!topic) {
       state = "empty";
     } else if (cal.status !== "published" || now >= doorAnswerableUntil(cal, n)) {
-      state = "closed";
+      state = "missed"; // day has passed without an answer: 0 points
     } else {
       state = "ready";
     }

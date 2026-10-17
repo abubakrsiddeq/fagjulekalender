@@ -78,7 +78,7 @@ export function defaultCalendarInput(now = new Date()): CalendarInput {
     closesAtLocal: `${year}-12-31T23:59`,
     pointsCorrect: 10,
     sameDayBonus: 0,
-    lateAnswersAllowed: true,
+    lateAnswersAllowed: false,
     minAnswersToCount: 1,
     shuffleOptions: false,
     notifyTime: "07:30",

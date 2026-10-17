@@ -71,10 +71,6 @@ export function CalendarForm({ calendarId, initial, scheduleLocked }: { calendar
       </div>
       {scheduleLocked && <p className="small">{f.scheduleLocked}</p>}
       <label className="check">
-        <input type="checkbox" name="late_answers_allowed" defaultChecked={initial.lateAnswersAllowed} />
-        <span>{f.lateAnswers}</span>
-      </label>
-      <label className="check">
         <input type="checkbox" name="shuffle_options" defaultChecked={initial.shuffleOptions} />
         <span>{f.shuffle}</span>
       </label>
