@@ -15,11 +15,18 @@ export default async function LoginPage(props: PageProps<"/logg-inn">) {
   const t = await getT();
   return (
     <div className="wrap narrow">
-      <h1>{t.login.title}</h1>
-      <div className="panel">
-        <Suspense fallback={<Loading />}>
-          <LoginContent searchParams={props.searchParams} />
-        </Suspense>
+      <div className="auth">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/symbol.png" alt="" width={76} height={76} />
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small">{t.appName}</span>
+          <h1>{t.login.title}</h1>
+        </div>
+        <div className="panel">
+          <Suspense fallback={<Loading />}>
+            <LoginContent searchParams={props.searchParams} />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

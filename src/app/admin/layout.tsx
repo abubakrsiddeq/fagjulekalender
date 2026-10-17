@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AdminNav } from "./_components/AdminNav";
 import type { Metadata } from "next";
 import { getT } from "@/i18n/server";
 
@@ -9,13 +9,16 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   const n = (await getT()).admin.nav;
   return (
     <div className="wrap">
-      <nav className="admin-nav" aria-label={n.label}>
-        <Link href="/admin">{n.calendars}</Link>
-        <Link href="/admin/avdelinger">{n.departments}</Link>
-        <Link href="/admin/brukere">{n.users}</Link>
-        <Link href="/admin/innstillinger">{n.settings}</Link>
-        <Link href="/admin/logg">{n.log}</Link>
-      </nav>
+      <AdminNav
+        label={n.label}
+        items={[
+          { href: "/admin", label: n.calendars },
+          { href: "/admin/avdelinger", label: n.departments },
+          { href: "/admin/brukere", label: n.users },
+          { href: "/admin/innstillinger", label: n.settings },
+          { href: "/admin/logg", label: n.log },
+        ]}
+      />
       {children}
     </div>
   );

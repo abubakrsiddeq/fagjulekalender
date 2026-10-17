@@ -10,17 +10,25 @@ export default async function Home(props: PageProps<"/">) {
   const t = await getT();
   return (
     <div className="wrap">
-      <header className="page-head">
-        <span className="eyebrow">{t.landing.eyebrow}</span>
-        <h1>{t.landing.title}</h1>
-        <p>{t.landing.intro}</p>
-      </header>
-      <Suspense fallback={<Loading />}>
-        <HomeContent searchParams={props.searchParams} />
-      </Suspense>
+      <section className="hero">
+        <div className="stack">
+          <header className="page-head">
+            <span className="eyebrow">{t.landing.eyebrow}</span>
+            <h1>{t.landing.title}</h1>
+            <p>{t.landing.intro}</p>
+          </header>
+          <Suspense fallback={<Loading />}>
+            <HomeContent searchParams={props.searchParams} />
+          </Suspense>
+        </div>
+        <div className="hero-art" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/symbol.png" alt="" width={128} height={128} />
+        </div>
+      </section>
       <section className="panel" aria-labelledby="how-h">
         <h2 id="how-h">{t.landing.howTitle}</h2>
-        <ol style={{ margin: 0, paddingLeft: 20, display: "grid", gap: 6 }}>
+        <ol className="steps">
           {t.landing.how.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -40,32 +48,32 @@ async function HomeContent({ searchParams }: { searchParams: PageProps<"/">["sea
   if (!user) {
     const next = calendars.length === 1 ? `/kalender/${calendars[0].slug}` : "/";
     return (
-      <div className="row">
+      <div className="row cta">
         <Link className="btn" href={`/logg-inn?neste=${encodeURIComponent(next)}`}>
-          {t.landing.signInCta}
+          {t.landing.signInCta} →
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="stack">
+    <div className="stack cta">
       {noAccess && <p className="alert">{t.landing.noAccess}</p>}
       {calendars.length === 0 ? (
         <p className="note">{t.landing.noCalendars}</p>
       ) : (
-        <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        <ul className="cal-list">
           {calendars.map((c) => (
-            <li key={c.id} className="panel">
-              <div className="panel-head">
-                <h2>{c.name}</h2>
+            <li key={c.id} className="panel cal-card">
+              <div className="stack" style={{ gap: 4 }}>
                 <span className="small">
                   {formatDayMonth(c.start_date, t.lang)} {c.year}
                 </span>
+                <h2>{c.name}</h2>
               </div>
               <div className="row">
                 <Link className="btn" href={`/kalender/${c.slug}`}>
-                  {t.landing.openCalendar}
+                  {t.landing.openCalendar} →
                 </Link>
               </div>
             </li>

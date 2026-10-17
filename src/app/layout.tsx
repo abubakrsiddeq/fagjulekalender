@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Figtree, Young_Serif } from "next/font/google";
+import { Figtree, Fraunces } from "next/font/google";
 import { InlineScript } from "@/components/InlineScript";
 import { LocaleRoot } from "@/components/LocaleRoot";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -9,7 +9,7 @@ import { getT } from "@/i18n/server";
 import "./globals.css";
 
 // Fonts are downloaded at build time and served from this app, so browsers never contact Google.
-const display = Young_Serif({ weight: "400", subsets: ["latin"], variable: "--font-display", display: "swap" });
+const display = Fraunces({ weight: ["500", "600"], subsets: ["latin"], variable: "--font-display", display: "swap" });
 const body = Figtree({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,8 +25,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f5f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1714" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f7f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a1315" },
   ],
 };
 
